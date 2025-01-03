@@ -4,9 +4,6 @@ userName="$4"
 userPass="$5"
 
 adminName="$6"
-
-echo $adminName
-
 adminPass="$7"
 
 expect -c "
