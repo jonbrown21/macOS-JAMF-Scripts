@@ -1,0 +1,6 @@
+<dict>
+    <key>IntuneMAMAllowedAccountsOnly</key>
+    <string>Enabled</string>
+    <key>IntuneMAMUPN</key>
+    <string>$EMAIL</string>
+</dict>

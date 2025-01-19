@@ -1,0 +1,12 @@
+<dict>
+    <key>Public ID</key>
+    <string><From Client Success Team></string>
+    <key>Management ID</key>
+    <string>$UDID</string>
+    <key>com.box.mdm.oneTimeToken</key>
+    <string>$UDID</string>
+    <key>User Email Address</key>
+    <string>$EMAIL</string>
+    <key>Billing ID</key>
+    <string/>
+</dict>
