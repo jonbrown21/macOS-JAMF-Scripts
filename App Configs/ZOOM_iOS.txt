@@ -1,0 +1,6 @@
+<dict>
+    <key>ForceLoginWithSSO</key>
+    <true/>
+    <key>ForceSSOURL</key>
+    <string><SSO URL></string>
+</dict>

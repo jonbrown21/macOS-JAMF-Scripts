@@ -1,0 +1,16 @@
+<dict>
+    <key>com.microsoft.outlook.EmailProfile.AccountType</key>
+    <string>ModernAuth</string>
+    <key>com.microsoft.outlook.EmailProfile.EmailAddress</key>
+    <string>$EMAIL</string>
+    <key>com.microsoft.outlook.EmailProfile.EmailUPN</key>
+    <string>$EMAIL</string>
+    <key>com.microsoft.outlook.Mail.FocusedInbox</key>
+    <false/>
+    <key>com.microsoft.outlook.Mail.OrganizeByThreadEnabled</key>
+    <true/>
+    <key>com.microsoft.outlook.Mail.DefaultSignatureEnabled</key>
+    <true/>
+    <key>IntuneMAMAllowedAccountsOnly</key>
+    <string>Disabled</string>
+</dict>
