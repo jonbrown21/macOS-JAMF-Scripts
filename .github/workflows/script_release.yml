@@ -22,11 +22,15 @@ jobs:
       - name: Run version check script
         run: .github/scripts/version_check.sh
 
-      - name: Commit changes if any
+      - name: Commit changes if any (with logging)
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add scripts/
+          echo "=== Git Status ==="
+          git status
+          echo "=== Git Diff ==="
+          git diff --cached
           git diff --cached --quiet || git commit -m "Auto-update script headers"
           git push
 
