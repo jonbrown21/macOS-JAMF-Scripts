@@ -1,93 +1,102 @@
 name: Script Versioning and Release
-true:
-  pull_request:
-    paths:
-    - Scripts/**/*.sh
-    - Scripts/**/*.zsh
+
+on:
   push:
     branches:
-    - main
+      - main
+  pull_request:
+    paths:
+      - 'Scripts/**/*.sh'
+      - 'Scripts/**/*.zsh'
+
 jobs:
   check-version:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-    - name: Make version_check.sh executable
-      run: chmod +x .github/scripts/version_check.sh
-    - name: Run version check script if Scripts/ exists and is not empty
-      run: "if [ -d Scripts ] && [ \"$(ls -A Scripts)\" ]; then\n  echo \"Running\
-        \ version_check.sh...\"\n  .github/scripts/version_check.sh\nelse\n  echo\
-        \ \"Scripts directory is missing or empty. Skipping version check.\"\nfi\n"
-    - name: Commit changes if any (with logging)
-      run: "if [ -d Scripts ] && [ \"$(ls -A Scripts)\" ]; then\n  git config user.name\
-        \ \"github-actions[bot]\"\n  git config user.email \"github-actions[bot]@users.noreply.github.com\"\
-        \n  git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN\
-        \ }}@github.com/${{ github.repository }}\n\n  echo \"=== Git Status ===\"\n\
-        \  git status\n  echo \"=== Git Diff ===\"\n  git diff --cached\n\n  if git\
-        \ diff --quiet; then\n    echo \"No changes to commit.\"\n  else\n    git\
-        \ add Scripts/\n    git commit -m \"Auto-update script headers\"\n    git\
-        \ push\n  fi\nelse\n  echo \"Scripts directory is missing or empty. Nothing\
-        \ to commit.\"\nfi\n"
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Make version_check.sh executable
+        run: chmod +x .github/scripts/version_check.sh
+
+      - name: Run version check script if Scripts/ exists and is not empty
+        run: |
+          if [ -d Scripts ] && [ "$(ls -A Scripts)" ]; then
+            echo "Running version_check.sh..."
+            .github/scripts/version_check.sh
+          else
+            echo "Scripts directory is missing or empty. Skipping version check."
+          fi
+
+      - name: Commit changes if any (with logging)
+        run: |
+          if [ -d Scripts ] && [ "$(ls -A Scripts)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+            echo "=== Git Status ==="
+            git status
+            echo "=== Git Diff ==="
+            git diff --cached
+
+            if git diff --quiet; then
+              echo "No changes to commit."
+            else
+              git add Scripts/
+              git commit -m "Auto-update script headers"
+              git push
+            fi
+          else
+            echo "Scripts directory is missing or empty. Nothing to commit."
+          fi
+
   release:
     if: github.ref == 'refs/heads/main'
     needs: check-version
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.x
-    - name: Install OpenAI Python SDK
-      run: pip install openai
-    - name: Generate release notes
-      env:
-        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      run: python .github/scripts/generate_release_notes.py
-    - name: Extract version from scripts
-      id: extract_version
-      run: 'VERSION=$(grep -h ''Version:'' Scripts/* | sed -E ''s/.*Version:[[:space:]]*//''
-        | sort -V | tail -n 1)
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-        '
-    - name: Zip scripts
-      run: 'mkdir -p temp_zip
+      - name: Install OpenAI Python SDK
+        run: pip install openai
 
-        cp Scripts/*.sh Scripts/*.zsh temp_zip/ 2>/dev/null || true
+      - name: Generate release notes
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python .github/scripts/generate_release_notes.py
 
-        cd temp_zip
+      - name: Extract version from scripts
+        id: extract_version
+        run: |
+          VERSION=$(grep -h 'Version:' Scripts/* | sed -E 's/.*Version:[[:space:]]*//' | sort -V | tail -n 1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
-        zip ../Scripts.zip *.sh *.zsh 2>/dev/null || true
+      - name: Zip scripts
+        run: |
+          mkdir -p temp_zip
+          cp Scripts/*.sh Scripts/*.zsh temp_zip/ 2>/dev/null || true
+          cd temp_zip
+          zip ../Scripts.zip *.sh *.zsh 2>/dev/null || true
+          cd ..
+          rm -rf temp_zip
 
-        cd ..
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.extract_version.outputs.version }}
+          name: Release v${{ steps.extract_version.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            Scripts/*.sh
+            Scripts/*.zsh
+            Scripts.zip
 
-        rm -rf temp_zip
-
-        '
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v${{ steps.extract_version.outputs.version }}
-        name: Release v${{ steps.extract_version.outputs.version }}
-        body_path: RELEASE_NOTES.md
-        files: 'Scripts/*.sh
-
-          Scripts/*.zsh
-
-          Scripts.zip
-
-          '
-    - name: Update README
-      run: python .github/scripts/update_readme.py
-'on':
-  pull_request:
-    paths:
-    - Scripts/**/*.sh
-    - Scripts/**/*.zsh
-  push:
-    branches:
-    - main
+      - name: Update README
+        run: python .github/scripts/update_readme.py
