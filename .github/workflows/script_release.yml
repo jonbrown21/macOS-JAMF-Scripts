@@ -19,20 +19,37 @@ jobs:
       - name: Make version_check.sh executable
         run: chmod +x .github/scripts/version_check.sh
 
-      - name: Run version check script
-        run: .github/scripts/version_check.sh
+      - name: Run version check script if Scripts/ exists and is not empty
+        run: |
+          if [ -d Scripts ] && [ "$(ls -A Scripts)" ]; then
+            echo "Running version_check.sh..."
+            .github/scripts/version_check.sh
+          else
+            echo "Scripts directory is missing or empty. Skipping version check."
+          fi
 
       - name: Commit changes if any (with logging)
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git add Scripts/
-          echo "=== Git Status ==="
-          git status
-          echo "=== Git Diff ==="
-          git diff --cached
-          git diff --cached --quiet || git commit -m "Auto-update script headers"
-          git push
+          if [ -d Scripts ] && [ "$(ls -A Scripts)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+
+            echo "=== Git Status ==="
+            git status
+            echo "=== Git Diff ==="
+            git diff --cached
+
+            if git diff --quiet; then
+              echo "No changes to commit."
+            else
+              git add Scripts/
+              git commit -m "Auto-update script headers"
+              git push
+            fi
+          else
+            echo "Scripts directory is missing or empty. Nothing to commit."
+          fi
 
   release:
     if: github.ref == 'refs/heads/main'
@@ -51,7 +68,6 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python .github/scripts/generate_release_notes.py
-
       - name: Extract version from scripts
         id: extract_version
         run: |
@@ -60,9 +76,12 @@ jobs:
 
       - name: Zip scripts
         run: |
-          cd scripts
-          zip ../scripts.zip *.sh *.zsh || true
+          mkdir -p temp_zip
+          cp Scripts/*.sh Scripts/*.zsh temp_zip/ 2>/dev/null || true
+          cd temp_zip
+          zip ../Scripts.zip *.sh *.zsh 2>/dev/null || true
           cd ..
+          rm -rf temp_zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
