@@ -5,7 +5,7 @@
 ... (auto-generated content here) ...
 <!-- VERSION_HISTORY_END -->
 
-Welcome to the **macOS JAMF Scripts** repository! 🚀 Whether you're an IT admin managing fleets of Macs or just a curious tinkerer, this collection of scripts is here to make your JAMF Pro game stronger.  
+Welcome to the **macOS JAMF Scripts** Repository! 🚀 Whether you're an IT admin managing fleets of Macs or just a curious tinkerer, this collection of scripts is here to make your JAMF Pro game stronger.  
 
 ---
 
