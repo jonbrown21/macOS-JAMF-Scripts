@@ -10,7 +10,7 @@ def get_commit_messages():
 
 def generate_summary(commits):
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "Summarize the following commit messages into a changelog."},
             {"role": "user", "content": "\n".join(commits)}
