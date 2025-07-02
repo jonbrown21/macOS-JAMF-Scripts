@@ -65,7 +65,7 @@ jobs:
           python-version: '3.x'
 
       - name: Install OpenAI Python SDK
-        run: pip install openai
+        run: pip install openai==0.28
 
       - name: Generate release notes
         env:
