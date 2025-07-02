@@ -6,7 +6,7 @@
 AUTHOR="Jon Brown"
 TODAY=$(date +%Y-%m-%d)
 
-for file in scripts/*; do
+for file in Scripts/*; do
   [[ "$file" != *.sh && "$file" != *.zsh ]] && continue
 
   HEADER=$(grep -m1 '^# Version:' "$file")
