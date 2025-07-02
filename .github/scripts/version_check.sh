@@ -1,0 +1,34 @@
+#!/bin/zsh
+
+# version_check.sh
+# Adds or updates version headers in shell scripts
+
+AUTHOR="Jon Brown"
+TODAY=$(date +%Y-%m-%d)
+
+for file in scripts/*(.N); do
+  [[ "$file" != *.sh && "$file" != *.zsh ]] && continue
+  HEADER=$(grep -m1 '^# Version:' "$file")
+  if [[ -z "$HEADER" ]]; then
+    sed -i '' "1s;^;###############################################\\
+# Author : $AUTHOR\\
+# Date   : $TODAY\\
+# Version: 0.1\\
+###############################################\\
+\\
+;" "$file"
+  else
+    VERSION=$(echo "$HEADER" | awk '{print $3}')
+    MAJOR=$(echo $VERSION | cut -d. -f1)
+    MINOR=$(echo $VERSION | cut -d. -f2)
+    if [[ "$MINOR" -ge 10 ]]; then
+      MAJOR=$((MAJOR + 1))
+      MINOR=0
+    else
+      MINOR=$((MINOR + 1))
+    fi
+    NEW_VERSION="$MAJOR.$MINOR"
+    sed -i '' "s/^# Version: .*/# Version: $NEW_VERSION/" "$file"
+    sed -i '' "s/^# Date: .*/# Date   : $TODAY/" "$file"
+  fi
+done

@@ -1,0 +1,75 @@
+name: Script Versioning and Release
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**/*.sh'
+      - 'scripts/**/*.zsh'
+  push:
+    branches:
+      - main
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run version check script
+        run: |
+          chmod +x .github/scripts/version_check.sh
+          .github/scripts/version_check.sh
+
+      - name: Commit changes if any
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add scripts/
+          git diff --cached --quiet || git commit -m "Auto-update script headers"
+          git push
+
+  release:
+    if: github.ref == 'refs/heads/main'
+    needs: check-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Generate release notes
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python .github/scripts/generate_release_notes.py
+
+      - name: Extract version from scripts
+        id: extract_version
+        run: |
+          VERSION=$(grep -h 'Version:' scripts/* | sed -E 's/.*Version:[[:space:]]*//' | sort -V | tail -n 1)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Zip scripts
+        run: |
+          cd scripts
+          zip ../scripts.zip *.sh *.zsh || true
+          cd ..
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.extract_version.outputs.version }}
+          name: Release v${{ steps.extract_version.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            scripts/*.sh
+            scripts/*.zsh
+            scripts.zip
+
+      - name: Update README
+        run: python .github/scripts/update_readme.py
+
