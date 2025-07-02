@@ -16,7 +16,7 @@ A curated collection of scripts tailored for JAMF Pro deployments. These scripts
 
 ---
 
-## 🗂️ What's inside?  
+## 🗂️ What's inside  
 
 ### 📜 Scripts
 - **User-friendly naming convention**: Each script has a clear name so you know exactly what it does.  
