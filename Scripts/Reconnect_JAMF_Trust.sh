@@ -5,11 +5,27 @@
 # Date   : 2025-07-13
 
 # Version: 0.1
-
+#
+# Description:
+# This script uses **Jamf Helper** to display a popup message to users when the **Jamf Trust VPN**
+# is not running or has disconnected. It prompts the user to reconnect the VPN via a custom URL scheme.
+#
+# What it does:
+# 1. Detects the current logged-in user.
+# 2. Displays a branded Jamf Helper dialog warning the user that Jamf Trust VPN is disconnected.
+# 3. Offers the user two options: "Ok" or "Connect VPN". Both trigger the Jamf Trust URL scheme to re-enable VPN access.
+# 4. Optionally removes Jamf Protect local extension attributes and workflows used for triggering the notification.
+# 5. Sends a recon (`jamf recon`) to update inventory and clear extension attribute flags in Jamf Pro.
+#
+# ✅ Ideal for:
+# - Enforcement of always-on VPN posture.
+# - Closing the loop on Jamf Protect alerts tied to Trust VPN disconnects.
+#
+# For full details on configuring detection, response, and ongoing VPN connectivity enforcement using Jamf Pro and Trust, see:
+# 👉 https://jonbrown.org/blog/automatically-connecting-and-staying-connected-to-jamf-trust-vpn-with-jamf-pro/
 ###############################################
 
-
-﻿#!/bin/bash
+#!/bin/bash
 ## Get the logged in username
 currUser=$(/usr/bin/stat -f%Su /dev/console)
 
@@ -17,8 +33,8 @@ currUser=$(/usr/bin/stat -f%Su /dev/console)
 
 jamfHelper="/Library/Application Support/JAMF/bin/jamfHelper.app/Contents/MacOS/jamfHelper"
 
-#Title for Pop Up
-msgtitle="Montage Marketing Group" 
+# Title for Pop Up
+msgtitle="" 
 
 #Header for Pop Up
 heading="Jamf Trust VPN Access"
