@@ -4,7 +4,7 @@
 
 # Date   : 2025-07-13
 
-# Version: 0.2
+# Version: 0.3
 #
 # Description:
 # This script is used to grant FileVault access to a specified user account by adding them to the FileVault 2 pre-boot authorization list using `fdesetup add`.
