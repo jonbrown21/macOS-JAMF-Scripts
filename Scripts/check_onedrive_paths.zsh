@@ -2,6 +2,29 @@
 # Author : Jon Brown
 # Date   : 2025-07-13
 # Version: 0.2
+#
+# Description:
+# This script performs a compliance and cleanup check on a user's OneDrive folder 
+# (typically found under ~/Library/CloudStorage/). It is designed to identify and optionally correct
+# common issues that may cause OneDrive sync problems, especially in enterprise environments.
+#
+# What it does:
+# 1. Logs the currently logged-in user and locates their OneDrive sync path.
+# 2. Recursively scans the OneDrive directory for:
+#    - Invalid characters that are not allowed by OneDrive (e.g., *, :, <, >, ?, /, \, |, ")
+#    - Overly long full paths (longer than 400 characters)
+#    - Overly long filenames (longer than 255 characters)
+# 3. Optionally renames overly long filenames to a shortened version to bring them into compliance.
+# 4. Logs all findings and actions to a log file at `/Users/Shared/onedrive_path_check.log`.
+# 5. Outputs the log content for review or JAMF logging/EA integration.
+#
+# Requirements:
+# - This script must be run on a user session where the OneDrive folder is mounted in CloudStorage.
+# - Set `ONEDRIVE_FOLDER_NAME` to the correct folder name that matches the user's OneDrive mapping.
+#
+# Note:
+# This is useful for proactive troubleshooting and remediation of sync issues
+# on macOS systems managed via Jamf or MDM where OneDrive restrictions need enforcement.
 ###############################################
 
 #!/bin/zsh
