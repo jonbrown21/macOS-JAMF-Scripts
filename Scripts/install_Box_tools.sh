@@ -1,3 +1,14 @@
+###############################################
+
+# Author : Jon Brown
+
+# Date   : 2025-07-13
+
+# Version: 0.1
+
+###############################################
+
+
 ﻿#!/bin/bash
 
 currentUser=`/bin/ls -la /dev/console | /usr/bin/awk '{print$3}'`
