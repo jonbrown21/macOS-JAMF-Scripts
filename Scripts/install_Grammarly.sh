@@ -5,9 +5,32 @@
 # Date   : 2025-07-13
 
 # Version: 0.1
-
+#
+# Description:
+# This script automates the installation of **Grammarly Desktop** on macOS, handling permissions,
+# download, installation, onboarding deferral, and first launch.
+#
+# What it does:
+# 1. Detects the currently logged-in user and determines if they are a local admin.
+# 2. Sets the appropriate install location:
+#    - Installs in `/Applications` if the user is an admin.
+#    - Installs in `~/Applications` if the user is a standard user.
+# 3. Verifies Grammarly's CDN is reachable and downloads the latest `.dmg` installer.
+# 4. Unmounts any pre-existing Grammarly volumes to avoid conflicts.
+# 5. Mounts the `.dmg`, copies the app bundle to the target directory, and removes quarantine flags.
+# 6. Cleans up the disk image after installation.
+# 7. Sets a user preference to **defer onboarding**, which prevents the first-run intro from appearing.
+# 8. Launches Grammarly Desktop once installation is complete.
+#
+# Use case:
+# - Ideal for MDM and scripted deployment scenarios where Grammarly needs to be pre-installed
+#   for both standard and admin users.
+# - Ensures users don't need to interact with installers or onboarding popups.
+#
+# Note:
+# - The installer is fetched from Grammarly’s official CDN.
+# - If you pass a custom installer URL as `$4`, that will override the default.
 ###############################################
-
 
 ﻿#!/bin/sh
 currentUser=$(ls -l /dev/console | awk '{ print $3 }')

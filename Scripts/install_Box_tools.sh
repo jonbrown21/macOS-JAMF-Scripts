@@ -5,9 +5,22 @@
 # Date   : 2025-07-13
 
 # Version: 0.1
-
+#
+# Description:
+# This script automates the download and installation of **Box Tools** for the currently logged-in user.
+#
+# What it does:
+# 1. Identifies the current user by inspecting the `/dev/console` session.
+# 2. Changes the working directory to `/Users/Shared` (a universally accessible path), 
+#    which avoids permission issues encountered when using `/tmp` or `/usr/local/bin` in some MDM environments like Mosyle.
+# 3. Downloads the latest Box Tools installer package from Box's official S3 endpoint.
+# 4. Installs the package into the current user's home directory context using `installer -target CurrentUserHomeDirectory`.
+# 5. Cleans up the downloaded installer after installation.
+#
+# Use case:
+# - Ideal for MDM/DEP workflows or post-enrollment scripts where you want to silently deploy Box Tools without user interaction.
+# - Helps avoid permission issues by executing download and install in a user-safe and MDM-friendly path.
 ###############################################
-
 
 ﻿#!/bin/bash
 
