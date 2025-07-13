@@ -1,3 +1,14 @@
+###############################################
+
+# Author : Jon Brown
+
+# Date   : 2025-07-13
+
+# Version: 0.1
+
+###############################################
+
+
 ﻿#!/bin/sh
 currentUser=$(ls -l /dev/console | awk '{ print $3 }')
 dmgfile="Grammarly.dmg"

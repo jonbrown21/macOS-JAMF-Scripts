@@ -4,7 +4,7 @@
 
 # Date   : 2025-07-13
 
-# Version: 0.1
+# Version: 0.2
 
 # Description:
 # This script reinstalls and re-enrolls a Mac into Automox using best practices for Apple Silicon (M1–M4) Macs.
