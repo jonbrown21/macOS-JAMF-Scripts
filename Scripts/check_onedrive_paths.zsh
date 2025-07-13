@@ -10,7 +10,11 @@
 INVALID_CHARS='[*:<>?/\\|"]'
 MAX_PATH_LENGTH=400
 MAX_FILENAME_LENGTH=255
-ONEDRIVE_FOLDER_NAME="OneDrive-SharedLibraries-MontageMarketingGroup"
+
+# Enter your value here
+ONEDRIVE_FOLDER_NAME=""
+
+# Enter your value here
 LOG_FILE="/Users/Shared/onedrive_path_check.log"
 
 # Get current logged-in user
