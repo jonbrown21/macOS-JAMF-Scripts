@@ -5,7 +5,19 @@
 # Date   : 2025-07-13
 
 # Version: 0.1
-
+#
+# Description:
+# This script is used to grant FileVault access to a specified user account by adding them to the FileVault 2 pre-boot authorization list using `fdesetup add`.
+#
+# What it does:
+# 1. Prompts the logged-in user via AppleScript dialogs to input the credentials of an existing FileVault-enabled admin user.
+# 2. Uses the provided credentials along with a known username/password pair (passed as $4 and $5) to authorize and add that user to FileVault.
+# 3. Executes the `fdesetup add` command via `expect` to handle interactive password prompts in an automated fashion.
+#
+# ⚠️ Note:
+# - This script assumes the Mac is already encrypted with FileVault and that the admin user being used for authorization already has FileVault access.
+# - It requires GUI interaction (via dialogs) and is not suited for silent or background execution.
+# - Ensure `expect` is available on the system or installed prior to use.
 ###############################################
 
 
