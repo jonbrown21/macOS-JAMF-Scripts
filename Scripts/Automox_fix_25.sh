@@ -1,3 +1,14 @@
+###############################################
+
+# Author : Jon Brown
+
+# Date   : 2025-07-13
+
+# Version: 0.1
+
+###############################################
+
+
 #!/bin/bash
 
 sudo launchctl bootout system /Library/LaunchDaemons/com.automox.agent.plist
