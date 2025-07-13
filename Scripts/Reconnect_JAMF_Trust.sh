@@ -1,3 +1,14 @@
+###############################################
+
+# Author : Jon Brown
+
+# Date   : 2025-07-13
+
+# Version: 0.1
+
+###############################################
+
+
 ﻿#!/bin/bash
 ## Get the logged in username
 currUser=$(/usr/bin/stat -f%Su /dev/console)
