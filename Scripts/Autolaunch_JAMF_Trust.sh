@@ -4,7 +4,7 @@
 
 # Date   : 2025-07-13
 
-# Version: 0.1
+# Version: 0.2
 #
 # Description:
 # This script ensures that the **Jamf Trust VPN client** launches automatically at login
