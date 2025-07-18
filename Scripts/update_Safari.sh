@@ -25,8 +25,18 @@
 # - Only installs the first Safari update found in the update list.
 ###############################################
 
-﻿#!/bin/sh
+#!/bin/zsh
 
-Check_SafariUpdate=$(sudo softwareupdate -l | grep Safari | grep -o 'Safari[^[:blank:]]*' | head -n 1)
-/bin/echo "$Check_SafariUpdate"
-sudo softwareupdate -i "$Check_SafariUpdate"
+echo "Checking for Safari updates..."
+AVAILABLE_UPDATES=$(softwareupdate --list 2>&1)
+
+if echo "$AVAILABLE_UPDATES" | grep -q "Safari"; then
+  echo "Safari update found. Installing..."
+  if ! softwareupdate -i "Safari*" --verbose; then
+    echo "❌ Safari update failed."
+    exit 1
+  fi
+  echo "✅ Safari updated successfully."
+else
+  echo "✅ No Safari update available."
+fi

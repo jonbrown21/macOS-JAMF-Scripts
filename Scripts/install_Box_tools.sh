@@ -22,19 +22,31 @@
 # - Helps avoid permission issues by executing download and install in a user-safe and MDM-friendly path.
 ###############################################
 
-﻿#!/bin/bash
+#!/bin/zsh
 
-currentUser=`/bin/ls -la /dev/console | /usr/bin/awk '{print$3}'`
+BOX_URL="https://e3.boxcdn.net/box-installers/desktop/releases/mac/Box.pkg"
+PKG_PATH="/tmp/Box.pkg"
 
-# Changes into the Users Shared folder
-# /tmp and /usr/local/bin have permissions issues with Mosyle, not all can read from there
-cd /Users/Shared 
+# Download with error handling
+echo "Downloading Box Drive from $BOX_URL..."
+if ! curl -fL -o "$PKG_PATH" "$BOX_URL"; then
+  echo "❌ Failed to download Box Drive. URL may have changed or is unreachable."
+  exit 1
+fi
 
-#Download the Box Tools PKG to /Users/Shared
-sudo -u ${currentUser} curl -L --silent -o /Users/Shared/BoxTools.pkg "https://box-installers.s3.amazonaws.com/boxedit/mac/currentrelease/BoxToolsInstaller.pkg"
+# Validate file type
+if [[ ! -f "$PKG_PATH" ]]; then
+  echo "❌ Download failed: Box.pkg not found."
+  exit 1
+fi
 
-# Installs the package
-sudo -u ${currentUser} installer -pkg /Users/Shared/BoxTools.pkg -target CurrentUserHomeDirectory
+# Install package
+echo "Installing Box Drive..."
+if ! sudo installer -pkg "$PKG_PATH" -target /; then
+  echo "❌ Box Drive installation failed."
+  exit 1
+fi
 
-# Removes the package after installation
-rm -f /Users/Shared/BoxTools.pkg
+# Clean up
+rm -f "$PKG_PATH"
+echo "✅ Box Drive installed successfully."
