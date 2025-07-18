@@ -32,62 +32,39 @@
 # - If you pass a custom installer URL as `$4`, that will override the default.
 ###############################################
 
-﻿#!/bin/sh
-currentUser=$(ls -l /dev/console | awk '{ print $3 }')
-dmgfile="Grammarly.dmg"
-volname="Grammarly"
-/bin/echo "--"
-# check if logged in user has admin rights
-IsUserAdmin=$(id -G $currentUser| grep -v 80)
-if [ -n "$IsUserAdmin" ]; then
-grammarly_dir="/Users/${currentUser}/Applications"
-    /bin/echo "`date`: $currentUser is not local admin"
-else
-grammarly_dir="/Applications"
-    /bin/echo "`date`: $currentUser is a local admin"
+#!/bin/zsh
+
+URL="https://download.editor.grammarly.com/mac/Grammarly.dmg"
+DMG_PATH="/tmp/Grammarly.dmg"
+MOUNTPOINT="/Volumes/Grammarly"
+
+echo "Downloading Grammarly from $URL..."
+if ! curl -fL -o "$DMG_PATH" "$URL"; then
+  echo "❌ Failed to download Grammarly. URL may have changed or is unreachable."
+  exit 1
 fi
-# check if Applications folder exists
-if [ -d "$grammarly_dir" ]; then
-echo "Application folder exists"
-else
-echo "Application folder doesn't exist"
-mkdir "$grammarly_dir"
-    chown -R "$currentUser":staff "${grammarly_dir}"
+
+if [[ ! -f "$DMG_PATH" ]]; then
+  echo "❌ Download failed: Grammarly.dmg not found."
+  exit 1
 fi
-# check Download link and availability of Grammarly CDN
-if [ -z "$4" ]; then
-    url='https://download-mac.grammarly.com/Grammarly.dmg'
-    /bin/echo "No arguments supplied. Using default address"
-else
-    url=$4
+
+echo "Mounting disk image..."
+if ! hdiutil attach "$DMG_PATH" -mountpoint "$MOUNTPOINT" -nobrowse -quiet; then
+  echo "❌ Failed to mount Grammarly.dmg"
+  rm -f "$DMG_PATH"
+  exit 1
 fi
-/usr/bin/curl -f -s -I $url &>/dev/null
-if [[ $? -eq 0 ]]; then
-    /bin/echo "`date`: Grammarly Desktop download site ${url} is available."
-else
-    /bin/echo "`date`: Grammarly Desktop download site ${url} is NOT available."
-    exit 1
-fi
-/bin/echo "`date`: Checking and unmounting existing installer disk image"
-/usr/bin/hdiutil detach $(/bin/df | /usr/bin/grep "${volname}" | awk '{print $1}') -quiet
-/bin/sleep 10
-/bin/echo "`date`: Downloading latest version"
-/usr/bin/curl -s -o /tmp/${dmgfile} ${url}
-/bin/echo "`date`: Mounting installer disk image"
-/usr/bin/hdiutil attach /tmp/${dmgfile} -nobrowse -quiet
-/bin/echo "`date`: Installing..."
-/bin/echo "${grammarly_dir}/Grammarly Desktop.app"
-/usr/bin/sudo -u "$currentUser" cp -R "/Volumes/${volname}/Grammarly Installer.app" "${grammarly_dir}/Grammarly Desktop.app"
-/usr/sbin/chown -R "$currentUser":staff "${grammarly_dir}/Grammarly Desktop.app"
-xattr -r -d com.apple.quarantine "${grammarly_dir}/Grammarly Desktop.app"
-/bin/sleep 10
-/bin/echo "`date`: Unmounting installer disk image"
-/usr/bin/hdiutil detach $(/bin/df | /usr/bin/grep "${volname}" | awk '{print $1}') -quiet
-/bin/sleep 10
-/bin/echo "`date`: Deleting disk image"
-/bin/rm /tmp/"${dmgfile}"
-/bin/echo "`date`: Setting onboarding deferral"
-/usr/bin/sudo -u ${currentUser} defaults write com.grammarly.ProjectLlama deferOnboarding -bool YES
-/bin/echo "`date`: Running the app"
-/usr/bin/sudo -u ${currentUser} open "${grammarly_dir}/Grammarly Desktop.app" --args launchSourceInstaller
-exit 0
+
+echo "Copying Grammarly.app to /Applications..."
+cp -R "$MOUNTPOINT/Grammarly.app" "/Applications/" || {
+  echo "❌ Copy failed."
+  hdiutil detach "$MOUNTPOINT" -quiet
+  rm -f "$DMG_PATH"
+  exit 1
+}
+
+# Eject and clean up
+hdiutil detach "$MOUNTPOINT" -quiet
+rm -f "$DMG_PATH"
+echo "✅ Grammarly installed successfully."
