@@ -5,14 +5,15 @@ on:
     branches:
       - main
     tags:
-      - 'v*'            # Push a tag like v1.0.0 to create a release
+      - "v*"     # create a release when pushing tags like v1.0.0
   pull_request:
     paths:
-      - '**/*.sh'
-      - '**/*.zsh'
-      - '**/*.py'
-      - 'scripts/**'
-      - '.github/workflows/**'
+      - "**/*.sh"
+      - "**/*.zsh"
+      - "**/*.py"
+      - "scripts/**"
+      - ".github/scripts/**"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
@@ -47,43 +48,43 @@ jobs:
           NOTES_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/generate_release_notes\.py$' || true)"
           if [ -z "${NOTES_SCRIPT}" ]; then
             echo "Could not find generate_release_notes.py under scripts/ or .github/scripts/. Creating stub notes."
-            echo "# Release Notes" > RELEASE_NOTES.md
-            echo "" >> RELEASE_NOTES.md
-            echo "_(No release notes script found in this run.)_" >> RELEASE_NOTES.md
+            {
+              echo "# Release Notes"
+              echo
+              echo "_(No release notes script found in this run.)_"
+            } > RELEASE_NOTES.md
             exit 0
           fi
+
           if [ -n "${OPENAI_API_KEY:-}" ]; then
             echo "Running: python ${NOTES_SCRIPT}"
             python "${NOTES_SCRIPT}"
           else
             echo "OPENAI_API_KEY not set; skipping AI release notes."
-            echo "# Release Notes" > RELEASE_NOTES.md
-            echo "" >> RELEASE_NOTES.md
-            echo "_(No AI-generated release notes for this run.)_" >> RELEASE_NOTES.md
+            {
+              echo "# Release Notes"
+              echo
+              echo "_(No AI-generated release notes for this run.)_"
+            } > RELEASE_NOTES.md
           fi
 
       - name: Update README from release notes (auto-detect path)
         shell: bash
         run: |
-            set -euo pipefail
-            UPDATE_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/update_readme\.py$' || true)"
-            if [ -z "${UPDATE_SCRIPT}" ]; then
-              echo "Could not find update_readme.py under scripts/ or .github/scripts/. Skipping README update."
-              exit 0
-            fi
-            echo "Running: python ${UPDATE_SCRIPT}"
-            python "${UPDATE_SCRIPT}"
-
-
-      - name: Make version script executable
-        run: chmod +x scripts/version_check.sh
+          set -euo pipefail
+          UPDATE_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/update_readme\.py$' || true)"
+          if [ -z "${UPDATE_SCRIPT}" ]; then
+            echo "Could not find update_readme.py under scripts/ or .github/scripts/. Skipping README update."
+            exit 0
+          fi
+          echo "Running: python ${UPDATE_SCRIPT}"
+          python "${UPDATE_SCRIPT}"
 
       - name: Apply version headers recursively (sh/zsh/py)
         shell: bash
         run: |
           set -euo pipefail
           VC_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/version_check\.sh$' || true)"
-
           if [ -z "${VC_SCRIPT}" ]; then
             echo "version_check.sh not found under scripts/ or .github/scripts/."
             echo "Creating a fallback at .github/scripts/version_check.sh ..."
@@ -126,12 +127,12 @@ EOF
           "${VC_SCRIPT}"
 
       - name: Build scripts bundle (recursive, ignore macOS cruft)
+        shell: bash
         run: |
+          set -euo pipefail
           rm -f scripts_bundle.zip
-          # Collect all tracked shell & python files recursively
           mapfile -d '' FILES < <(git ls-files -z '**/*.sh' '**/*.zsh' '**/*.py')
           if [ "${#FILES[@]}" -gt 0 ]; then
-            # Use a temp staging dir to preserve paths in the zip
             STAGE=".bundle_stage"
             rm -rf "$STAGE"
             mkdir -p "$STAGE"
@@ -142,14 +143,15 @@ EOF
             (cd "$STAGE" && zip -r ../scripts_bundle.zip . -x '*/.DS_Store')
             rm -rf "$STAGE"
           else
-            # Ensure a zip exists even if no files matched
             zip -r scripts_bundle.zip . -x '*/.DS_Store' >/dev/null
           fi
           ls -lh scripts_bundle.zip
 
       - name: Commit & push changes (only on branch pushes)
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        shell: bash
         run: |
+          set -euo pipefail
           if ! git diff --quiet; then
             git config user.name  "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -160,7 +162,7 @@ EOF
             echo "No changes to commit."
           fi
 
-      - name: Upload bundle as workflow artifact (for debugging/PRs)
+      - name: Upload bundle as workflow artifact (for PRs / debugging)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -177,9 +179,10 @@ EOF
         uses: actions/checkout@v4
 
       - name: Ensure bundle exists
+        shell: bash
         run: |
+          set -euo pipefail
           if [ ! -f scripts_bundle.zip ]; then
-            # Rebuild if this job runs independently on the tag
             mapfile -d '' FILES < <(git ls-files -z '**/*.sh' '**/*.zsh' '**/*.py')
             rm -f scripts_bundle.zip
             if [ "${#FILES[@]}" -gt 0 ]; then
@@ -198,11 +201,15 @@ EOF
           fi
 
       - name: Ensure release notes exist
+        shell: bash
         run: |
+          set -euo pipefail
           if [ ! -f RELEASE_NOTES.md ]; then
-            echo "# Release Notes" > RELEASE_NOTES.md
-            echo "" >> RELEASE_NOTES.md
-            echo "_(Release notes not generated in this job.)_" >> RELEASE_NOTES.md
+            {
+              echo "# Release Notes"
+              echo
+              echo "_(Release notes not generated in this job.)_"
+            } > RELEASE_NOTES.md
           fi
 
       - name: Create GitHub Release
