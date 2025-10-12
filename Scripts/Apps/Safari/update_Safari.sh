@@ -4,7 +4,7 @@
 
 # Date   : 2025-10-12
 
-# Version: 0.6
+# Version: 0.7
 #
 # Description:
 # This script checks for available Safari updates using the `softwareupdate` utility

@@ -4,7 +4,7 @@
 
 # Date   : 2025-10-12
 
-# Version: 0.6
+# Version: 0.7
 #
 # Description:
 # This script uses **Jamf Helper** to display a popup message to users when the **Jamf Trust VPN**

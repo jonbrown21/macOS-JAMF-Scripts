@@ -4,7 +4,7 @@
 
 # Date   : 2025-10-12
 
-# Version: 0.6
+# Version: 0.7
 #
 # Description:
 # This script automates the download and installation of **Box Tools** for the currently logged-in user.
