@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - "v*"     # create a release when pushing tags like v1.0.0
+      - "v*"
   pull_request:
     paths:
       - "**/*.sh"
@@ -47,7 +47,7 @@ jobs:
           set -euo pipefail
           NOTES_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/generate_release_notes\.py$' || true)"
           if [ -z "${NOTES_SCRIPT}" ]; then
-            echo "Could not find generate_release_notes.py under scripts/ or .github/scripts/. Creating stub notes."
+            echo "No generate_release_notes.py found. Creating stub RELEASE_NOTES.md."
             {
               echo "# Release Notes"
               echo
@@ -60,7 +60,7 @@ jobs:
             echo "Running: python ${NOTES_SCRIPT}"
             python "${NOTES_SCRIPT}"
           else
-            echo "OPENAI_API_KEY not set; skipping AI release notes."
+            echo "OPENAI_API_KEY not set; creating stub RELEASE_NOTES.md."
             {
               echo "# Release Notes"
               echo
@@ -74,7 +74,7 @@ jobs:
           set -euo pipefail
           UPDATE_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/update_readme\.py$' || true)"
           if [ -z "${UPDATE_SCRIPT}" ]; then
-            echo "Could not find update_readme.py under scripts/ or .github/scripts/. Skipping README update."
+            echo "No update_readme.py found. Skipping README update."
             exit 0
           fi
           echo "Running: python ${UPDATE_SCRIPT}"
@@ -86,42 +86,9 @@ jobs:
           set -euo pipefail
           VC_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/version_check\.sh$' || true)"
           if [ -z "${VC_SCRIPT}" ]; then
-            echo "version_check.sh not found under scripts/ or .github/scripts/."
-            echo "Creating a fallback at .github/scripts/version_check.sh ..."
-            mkdir -p .github/scripts
-            cat > .github/scripts/version_check.sh <<'EOF'
-#!/bin/bash
-set -euo pipefail
-AUTHOR="Jon Brown"
-TODAY="$(date +%Y-%m-%d)"
-
-sedi(){ if sed --version >/dev/null 2>&1; then sed -i "$@"; else sed -i '' "$@"; fi; }
-bump(){ v="${1:-0.1}"; maj="${v%%.*}"; min="${v#*.}"; [[ "$maj" =~ ^[0-9]+$ ]]||maj=0; [[ "$min" =~ ^[0-9]+$ ]]||min=1; if ((min>=10)); then maj=$((maj+1)); min=0; else min=$((min+1)); fi; echo "$maj.$min"; }
-
-hdr_sh(){ f="$1"; cur="$(awk -F': ' '/^# Version:/{print $2; exit}' "$f")"
-  if [ -z "$cur" ]; then new="0.1"
-    if head -n1 "$f" | grep -q '^#!'; then { head -n1 "$f"; printf '%s\n' "###############################################" "# Author : $AUTHOR" "# Date   : $TODAY" "# Version: $new" "###############################################"; tail -n +2 "$f"; } > "$f.tmp" && mv "$f.tmp" "$f"
-    else { printf '%s\n' "###############################################" "# Author : $AUTHOR" "# Date   : $TODAY" "# Version: $new" "###############################################"; cat "$f"; } > "$f.tmp" && mv "$f.tmp" "$f"; fi
-  else new="$(bump "$cur")"; sedi "s/^# Version: .*/# Version: $new/" "$f"; sedi "s/^# Date   : .*/# Date   : $TODAY/" "$f"; fi
-}
-
-hdr_py(){ f="$1"; cur="$(awk -F': ' '/^# Version:/{print $2; exit}' "$f")"
-  grep -qE '^__version__\s*=' "$f" || { if head -n1 "$f" | grep -q '^#!'; then { head -n1 "$f"; echo '__version__ = "0.1"'; tail -n +2 "$f"; } > "$f.tmp" && mv "$f.tmp" "$f"; else { echo '__version__ = "0.1"'; cat "$f"; } > "$f.tmp" && mv "$f.tmp" "$f"; fi; }
-  if [ -z "$cur" ]; then new="0.1"
-    if head -n1 "$f" | grep -q '^#!'; then { head -n1 "$f"; printf '%s\n' "###############################################" "# Author : $AUTHOR" "# Date   : $TODAY" "# Version: $new" "###############################################"; tail -n +2 "$f"; } > "$f.tmp" && mv "$f.tmp" "$f"
-    else { printf '%s\n' "###############################################" "# Author : $AUTHOR" "# Date   : $TODAY" "# Version: $new" "###############################################"; cat "$f"; } > "$f.tmp" && mv "$f.tmp" "$f"; fi
-  else new="$(bump "$cur")"; sedi "s/^# Version: .*/# Version: $new/" "$f"; sedi "s/^# Date   : .*/# Date   : $TODAY/" "$f"; fi
-  hv="$(awk -F': ' '/^# Version:/{print $2; exit}' "$f")"; [ -n "$hv" ] && sedi "s/^(__version__\s*=\s*).*/\1\"$hv\"/" "$f"
-}
-
-export LC_ALL=C
-mapfile -d '' FILES < <(git ls-files -z '**/*.sh' '**/*.zsh' '**/*.py')
-for f in "${FILES[@]}"; do case "$f" in *.sh|*.zsh) hdr_sh "$f" ;; *.py) hdr_py "$f" ;; esac; done
-EOF
-            VC_SCRIPT=".github/scripts/version_check.sh"
-            git add .github/scripts/version_check.sh || true
+            echo "No version_check.sh found. Skipping versioning."
+            exit 0
           fi
-
           chmod +x "${VC_SCRIPT}"
           echo "Running: ${VC_SCRIPT}"
           "${VC_SCRIPT}"
