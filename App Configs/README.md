@@ -1,99 +1,70 @@
-# 📦 App Configs
+# 📦 App Configurations for macOS & iOS
 
-A collection of **Managed App Configurations** 📱💻 for iOS and macOS applications, ready to import into Jamf Pro as Configuration Profiles.
+Welcome to the **App Configs** library — a collection of pre‑built **Managed App Configurations** for common productivity apps used in Jamf Pro environments. These configurations let administrators define app settings automatically, without manual user setup.
 
 ---
 
 ## 🧭 Overview
-Each folder in **App Configs** contains XML or JSON payloads for specific apps. These files define key/value pairs that control app behavior via MDM. Many follow the [AppConfig Community](https://www.appconfig.org) standards for interoperability.
+Each subfolder in this directory contains a ready‑to‑use XML or JSON configuration file designed for Jamf Pro’s **Application & Custom Settings** payload. These payloads control how supported apps like Outlook, Teams, Zoom, Box, and OneDrive behave once deployed to macOS or iOS devices.
 
 ---
 
-## 🧰 Prerequisites
-- 🧑‍💻 **Jamf Pro Admin** access.
-- ✅ Target app is installed (via App Installers, VPP, or manual install).
-- 🧪 Test device or pilot Smart Group.
+## ⚙️ How It Works
+Jamf Pro supports app‑specific configuration profiles using **Managed App Config** payloads. These profiles push preferences directly into supported apps via MDM, enforcing settings such as sign‑in restrictions, default storage locations, or UI preferences.
+
+When a device receives the profile, the target app automatically applies those settings — giving end users a secure and preconfigured experience with minimal onboarding friction.
 
 ---
 
-## ⚙️ How to Use
+## 🧰 How to Deploy an App Config
 
-### Step 1: Import into Jamf Pro
-1. Navigate to **Computers → Configuration Profiles → New**.
-2. Add a **Name** and **Category** (e.g., “App Configs”).
+1. **Download** the configuration file for the desired app from its subfolder.
+2. In **Jamf Pro → Computers → Configuration Profiles → New**, create a new profile.
 3. Under **Application & Custom Settings**:
-   - 📄 *Upload*: XML/PLIST from this repo.
-   - 🧬 *Custom Schema*: Paste included JSON schema.
-4. Save and **Scope** to a pilot Smart Group.
-
-### Step 2: Validate Deployment
-- Refresh MDM inventory on a test device.
-- Confirm profile appears in:
-  - macOS: **System Settings → Profiles**
-  - iOS/iPadOS: **Settings → General → Device Management**
-- Launch app → Verify settings applied.
-
-### Step 3: Iterate & Document
-- Keep one profile per app (e.g., `Slack Config`).
-- Version in both GitHub and Jamf (use profile Notes).
-- Document known quirks or required bundle identifiers.
+   - Choose **Upload** and select the `.xml` or `.plist` file provided here.
+   - Or choose **Custom Schema** and paste the included JSON schema, if available.
+4. Assign a clear profile name (e.g., *Outlook Managed Settings*).
+5. **Scope** to a pilot Smart Group for testing.
+6. Deploy and monitor installation results under **Computers → History → Profiles**.
 
 ---
 
-## 🧩 Common Patterns
-| Purpose | Example |
-|----------|----------|
-| **Account Bootstrap** | Prefill domain, enforce SSO, skip onboarding |
-| **Security Hardening** | Disable external add-ins, restrict file sharing |
-| **UX Defaults** | Enable dark mode, set default notification behavior |
+## 🧩 Included Configurations
+| App | Description |
+|-----|--------------|
+| 📁 **Box** | Enforces secure storage paths, disables personal account linking, and controls sync behavior. |
+| ☁️ **OneDrive** | Prefills organizational account, enforces Known Folder Move (KFM), and disables personal logins. |
+| 📬 **Outlook** | Enables Microsoft Entra SSO, preconfigures accounts, and restricts personal mail profiles. |
+| 💬 **Teams** | Prefills tenant information, configures SSO, and manages auto‑start and notification settings. |
+| 🎥 **Zoom** | Sets SSO URLs, disables personal login, and enforces meeting security defaults. |
+
+---
+
+## 🔍 Validation Steps
+1. On a test device, run an inventory update in Jamf Pro.
+2. Verify the configuration profile appears under **System Settings → Profiles**.
+3. Launch the app and confirm preconfigured settings apply automatically.
+
+> ⚠️ Some settings only take effect on first launch — test using a fresh app install when validating.
 
 ---
 
 ## 🧑‍🔧 Troubleshooting
-- ❌ Config not applying? Check bundle ID and key path.
-- ⚠️ Some apps only apply settings at first launch.
-- 🔍 Validate XML/JSON syntax (use `plutil` or `jq`).
-- 🗂 Use the Jamf Pro log for profile installation status.
+| Issue | Possible Cause | Tip |
+|--------|-----------------|-----|
+| Config doesn’t apply | Incorrect bundle identifier | Confirm using `defaults read` or AppConfig docs |
+| Profile installs but app ignores keys | App version mismatch | Update to a supported version |
+| Invalid profile upload | Syntax error | Validate XML/JSON using `plutil` or `jq` |
 
 ---
 
-## 📚 Folder Sub‑README Templates
-Each subfolder should contain its own `README.md` with:
-- App name and version tested.
-- Configuration keys explained.
-- Screenshots (optional).
-- Example XML or JSON snippet.
-
-Example:
-```markdown
-# 📘 Outlook for Mac
-
-**Description:** Preconfigures Outlook accounts for SSO and disables personal email setup.
-
-**Keys:**
-- `DisablePersonalAccounts`: Prevents personal login.
-- `UseSSO`: Enables Microsoft Entra SSO.
-
-**Tested on:** macOS 14.6, Outlook 16.88
-
-**Notes:**
-Requires bundle ID `com.microsoft.Outlook`. Reinstall app if profile applied post‑launch.
-```
-
----
-
-## 🤝 Contributing
-- 🗂 Create a folder per app: `AppConfigs/<AppName>/`
-- ✍️ Add your configuration XML/JSON and README.
-- 🧾 Include Jamf screenshots or testing notes if available.
+## 🧾 Notes
+- Each app folder includes its own `README.md` explaining the keys, values, and deployment behavior in more detail.
+- Configurations follow **vendor documentation** whenever possible.
+- Always test before deploying at scale.
 
 ---
 
 ## ⚠️ Disclaimer
-All configurations are shared **as‑is**. Test thoroughly before deploying to production. Some apps may interpret keys differently depending on version.
-
----
-
-## ⏩ Next Steps
-Once we’ve built all `AppConfigs` subfolder READMEs, we’ll insert a **Table of Contents** block in the main repo README for quick navigation.
+These configurations are provided as examples for educational and administrative use. Always validate functionality in a test environment before deploying to production.
 
