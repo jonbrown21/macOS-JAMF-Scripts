@@ -63,7 +63,7 @@
 #
 # Usage
 # -----
-# /usr/local/bin/managed_python3 jamf_compliance_ea_reports_v1_0.py \
+# /usr/local/bin/managed_python3 JAMF\ Compliance\ Reports.py \
 #   [--ea-name "Compliance - Failed Result List"] \
 #   [--out-dir "./Reports"] \
 #   [--delimiter "|"] \
