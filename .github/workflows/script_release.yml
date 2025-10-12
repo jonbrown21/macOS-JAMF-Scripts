@@ -1,11 +1,8 @@
-name: Script release (nested + python)
+name: Script release (auto on change, nested + python)
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - "v*"
+    branches: [ main ]
   pull_request:
     paths:
       - "**/*.sh"
@@ -24,8 +21,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  versionize-and-notes:
-    name: Versionize headers, generate notes, update README
+  release-on-change:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -36,9 +32,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install OpenAI SDK (legacy)
+      - name: Install OpenAI SDK (legacy for generate_release_notes.py)
         run: pip install openai==0.28
 
+      # ----- Generate release notes (optional; stubs if not present / no key) -----
       - name: Generate release notes (auto-detect path)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -80,6 +77,7 @@ jobs:
           echo "Running: python ${UPDATE_SCRIPT}"
           python "${UPDATE_SCRIPT}"
 
+      # ----- Version headers across nested folders (sh/zsh/py) -----
       - name: Apply version headers recursively (sh/zsh/py)
         shell: bash
         run: |
@@ -93,7 +91,9 @@ jobs:
           echo "Running: ${VC_SCRIPT}"
           "${VC_SCRIPT}"
 
+      # ----- Build bundle of changed scripts (keeps folder structure) -----
       - name: Build scripts bundle (recursive, ignore macOS cruft)
+        id: bundle
         shell: bash
         run: |
           set -euo pipefail
@@ -114,6 +114,7 @@ jobs:
           fi
           ls -lh scripts_bundle.zip
 
+      # ----- Commit version/README changes back to main if needed -----
       - name: Commit & push changes (only on branch pushes)
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
         shell: bash
@@ -129,64 +130,59 @@ jobs:
             echo "No changes to commit."
           fi
 
-      - name: Upload bundle as workflow artifact (for PRs / debugging)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: scripts_bundle
-          path: scripts_bundle.zip
-
-  create-release:
-    name: Create GitHub Release (on tag)
-    runs-on: ubuntu-latest
-    needs: versionize-and-notes
-    if: startsWith(github.ref, 'refs/tags/')
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Ensure bundle exists
+      # ----- Detect if scripts changed in the latest commit on this branch -----
+      - name: Detect script changes in last commit
+        id: changed
         shell: bash
         run: |
           set -euo pipefail
-          if [ ! -f scripts_bundle.zip ]; then
-            mapfile -d '' FILES < <(git ls-files -z '**/*.sh' '**/*.zsh' '**/*.py')
-            rm -f scripts_bundle.zip
-            if [ "${#FILES[@]}" -gt 0 ]; then
-              STAGE=".bundle_stage"
-              rm -rf "$STAGE"
-              mkdir -p "$STAGE"
-              for f in "${FILES[@]}"; do
-                mkdir -p "$STAGE/$(dirname "$f")"
-                cp "$f" "$STAGE/$f"
-              done
-              (cd "$STAGE" && zip -r ../scripts_bundle.zip . -x '*/.DS_Store')
-              rm -rf "$STAGE"
-            else
-              zip -r scripts_bundle.zip . -x '*/.DS_Store' >/dev/null
-            fi
+          # Compare last commit against its parent on this runner (post-commit state)
+          BASE_COMMIT="$(git rev-parse HEAD^ || true)"
+          if [ -z "$BASE_COMMIT" ]; then
+            # First commit in repo or shallow clone; fallback to show files from HEAD
+            CHANGED="$(git diff --name-only | tr '\n' '\0' | xargs -0 -I{} echo {})"
+          else
+            CHANGED="$(git diff --name-only "$BASE_COMMIT"..HEAD | tr '\n' '\0' | xargs -0 -I{} echo {})"
+          fi
+          echo "Changed files:"
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -E '\.(sh|zsh|py)$' >/dev/null 2>&1; then
+            echo "scripts_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "scripts_changed=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Ensure release notes exist
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ ! -f RELEASE_NOTES.md ]; then
-            {
-              echo "# Release Notes"
-              echo
-              echo "_(Release notes not generated in this job.)_"
-            } > RELEASE_NOTES.md
-          fi
-
-      - name: Create GitHub Release
+      # ----- Auto-create a release when scripts changed on main -----
+      - name: Create GitHub Release (auto on change)
+        if: steps.changed.outputs.scripts_changed == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          tag_name: v${{ steps.tagvars.outputs.tag_part }}
+          name: v${{ steps.tagvars.outputs.tag_part }}
           body_path: RELEASE_NOTES.md
           files: |
             scripts_bundle.zip
             RELEASE_NOTES.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # note: tag will be created automatically at the current HEAD
+
+      # compute tag vars (run before the release step above via needs-like ordering)
+      - name: Compute tag variables
+        id: tagvars
+        if: steps.changed.outputs.scripts_changed == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          # vYYYY.MM.DD.<run_number>
+          TAG_PART="$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER}"
+          echo "tag_part=${TAG_PART}" >> $GITHUB_OUTPUT
+
+      # Always upload artifact for PRs/debugging
+      - name: Upload bundle as workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scripts_bundle
+          path: scripts_bundle.zip
