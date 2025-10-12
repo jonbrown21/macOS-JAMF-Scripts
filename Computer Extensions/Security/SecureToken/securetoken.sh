@@ -2,7 +2,7 @@
 ###############################################
 # Author : Jon Brown
 # Date   : 2025-10-12
-# Version: 0.3
+# Version: 0.4
 ###############################################
 
 # Extension attribute to report all user accounts who have a secure token
