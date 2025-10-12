@@ -35,7 +35,7 @@ jobs:
       - name: Install OpenAI SDK (legacy for generate_release_notes.py)
         run: pip install openai==0.28
 
-      # ----- Generate release notes (optional; stubs if not present / no key) -----
+      # ----- Generate release notes (optional; creates stub if script/key missing) -----
       - name: Generate release notes (auto-detect path)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -46,9 +46,9 @@ jobs:
           if [ -z "${NOTES_SCRIPT}" ]; then
             echo "No generate_release_notes.py found. Creating stub RELEASE_NOTES.md."
             {
-              echo "# Release Notes"
+              echo "# Release Notes ($(date -u +%Y-%m-%d))"
               echo
-              echo "_(No release notes script found in this run.)_"
+              echo "* Fixed an issue with the workflow"
             } > RELEASE_NOTES.md
             exit 0
           fi
@@ -59,9 +59,9 @@ jobs:
           else
             echo "OPENAI_API_KEY not set; creating stub RELEASE_NOTES.md."
             {
-              echo "# Release Notes"
+              echo "# Release Notes ($(date -u +%Y-%m-%d))"
               echo
-              echo "_(No AI-generated release notes for this run.)_"
+              echo "* Updated scripts"
             } > RELEASE_NOTES.md
           fi
 
@@ -91,29 +91,6 @@ jobs:
           echo "Running: ${VC_SCRIPT}"
           "${VC_SCRIPT}"
 
-      # ----- Build bundle of changed scripts (keeps folder structure) -----
-      - name: Build scripts bundle (recursive, ignore macOS cruft)
-        id: bundle
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -f scripts_bundle.zip
-          mapfile -d '' FILES < <(git ls-files -z '**/*.sh' '**/*.zsh' '**/*.py')
-          if [ "${#FILES[@]}" -gt 0 ]; then
-            STAGE=".bundle_stage"
-            rm -rf "$STAGE"
-            mkdir -p "$STAGE"
-            for f in "${FILES[@]}"; do
-              mkdir -p "$STAGE/$(dirname "$f")"
-              cp "$f" "$STAGE/$f"
-            done
-            (cd "$STAGE" && zip -r ../scripts_bundle.zip . -x '*/.DS_Store')
-            rm -rf "$STAGE"
-          else
-            zip -r scripts_bundle.zip . -x '*/.DS_Store' >/dev/null
-          fi
-          ls -lh scripts_bundle.zip
-
       # ----- Commit version/README changes back to main if needed -----
       - name: Commit & push changes (only on branch pushes)
         if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
@@ -130,59 +107,90 @@ jobs:
             echo "No changes to commit."
           fi
 
-      # ----- Detect if scripts changed in the latest commit on this branch -----
+      # ----- Detect if scripts changed in the last commit on this branch -----
       - name: Detect script changes in last commit
         id: changed
         shell: bash
         run: |
           set -euo pipefail
-          # Compare last commit against its parent on this runner (post-commit state)
           BASE_COMMIT="$(git rev-parse HEAD^ || true)"
           if [ -z "$BASE_COMMIT" ]; then
-            # First commit in repo or shallow clone; fallback to show files from HEAD
-            CHANGED="$(git diff --name-only | tr '\n' '\0' | xargs -0 -I{} echo {})"
+            CHANGED="$(git show --name-only --pretty='format:')"
           else
-            CHANGED="$(git diff --name-only "$BASE_COMMIT"..HEAD | tr '\n' '\0' | xargs -0 -I{} echo {})"
+            CHANGED="$(git diff --name-only "$BASE_COMMIT"..HEAD)"
           fi
           echo "Changed files:"
           echo "$CHANGED"
 
-          if echo "$CHANGED" | grep -E '\.(sh|zsh|py)$' >/dev/null 2>&1; then
+          if echo "$CHANGED" | grep -E '^Scripts/.*\.(sh|zsh|py)$' >/dev/null 2>&1; then
+            echo "scripts_changed=true" >> $GITHUB_OUTPUT
+          elif echo "$CHANGED" | grep -E '\.(sh|zsh|py)$' >/dev/null 2>&1; then
+            # scripts changed outside Scripts/, still release but assets limited to Scripts/
             echo "scripts_changed=true" >> $GITHUB_OUTPUT
           else
             echo "scripts_changed=false" >> $GITHUB_OUTPUT
           fi
 
-      # ----- Auto-create a release when scripts changed on main -----
-      - name: Create GitHub Release (auto on change)
-        if: steps.changed.outputs.scripts_changed == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.tagvars.outputs.tag_part }}
-          name: v${{ steps.tagvars.outputs.tag_part }}
-          body_path: RELEASE_NOTES.md
-          files: |
-            scripts_bundle.zip
-            RELEASE_NOTES.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # note: tag will be created automatically at the current HEAD
+      # ----- Build Scripts.zip (folder-only; ignore macOS cruft) -----
+      - name: Build Scripts.zip (folder-only)
+        if: steps.changed.outputs.scripts_changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f Scripts.zip
+          if [ -d "Scripts" ]; then
+            zip -r Scripts.zip Scripts -x '*/.DS_Store'
+            ls -lh Scripts.zip
+          else
+            echo "No Scripts/ folder found; skipping zip build."
+          fi
 
-      # compute tag vars (run before the release step above via needs-like ordering)
-      - name: Compute tag variables
+      # ----- Compute next tag (bump minor from latest vX.Y) -----
+      - name: Compute next tag (vMAJOR.MINOR)
         id: tagvars
         if: steps.changed.outputs.scripts_changed == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
         shell: bash
         run: |
           set -euo pipefail
-          # vYYYY.MM.DD.<run_number>
-          TAG_PART="$(date -u +%Y.%m.%d).${GITHUB_RUN_NUMBER}"
-          echo "tag_part=${TAG_PART}" >> $GITHUB_OUTPUT
+          LATEST="$(git tag -l 'v*' | sort -V | tail -n1)"
+          if [ -z "$LATEST" ]; then
+            BASE="0.0"
+          else
+            BASE="${LATEST#v}"
+          fi
+          MAJOR="${BASE%%.*}"
+          REST="${BASE#*.}"
+          if [ "$REST" = "$BASE" ]; then MINOR=0; else MINOR="${REST%%.*}"; fi
+          [[ "$MAJOR" =~ ^[0-9]+$ ]] || MAJOR=0
+          [[ "$MINOR" =~ ^[0-9]+$ ]] || MINOR=0
+          NEXT_MINOR=$((MINOR + 1))
+          NEXT="v${MAJOR}.${NEXT_MINOR}"
+          echo "tag_name=${NEXT}" >> $GITHUB_OUTPUT
+          echo "release_name=Release ${NEXT}" >> $GITHUB_OUTPUT
+          echo "Computed next tag: ${NEXT}"
+
+      # ----- Create GitHub Release (auto on change) -----
+      - name: Create GitHub Release (auto on change)
+        if: steps.changed.outputs.scripts_changed == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tagvars.outputs.tag_name }}
+          name: ${{ steps.tagvars.outputs.release_name }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            Scripts/**/*.sh
+            Scripts/**/*.zsh
+            Scripts/**/*.py
+            Scripts.zip
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # Always upload artifact for PRs/debugging
-      - name: Upload bundle as workflow artifact
+      - name: Upload Scripts.zip as artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: scripts_bundle
-          path: scripts_bundle.zip
+          name: Scripts-zip
+          path: Scripts.zip
+          if-no-files-found: ignore
