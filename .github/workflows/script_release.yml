@@ -8,6 +8,7 @@ on:
       - "**/*.sh"
       - "**/*.zsh"
       - "**/*.py"
+      - "Scripts/**"
       - "scripts/**"
       - ".github/scripts/**"
       - ".github/workflows/**"
@@ -24,8 +25,11 @@ jobs:
   release-on-change:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (full history + tags)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # needed for diff + tag discovery
+          fetch-tags: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -48,7 +52,7 @@ jobs:
             {
               echo "# Release Notes ($(date -u +%Y-%m-%d))"
               echo
-              echo "* Fixed an issue with the workflow"
+              echo "* Updated scripts"
             } > RELEASE_NOTES.md
             exit 0
           fi
@@ -107,28 +111,31 @@ jobs:
             echo "No changes to commit."
           fi
 
-      # ----- Detect if scripts changed in the last commit on this branch -----
-      - name: Detect script changes in last commit
+      # ----- Detect if scripts changed in this push (use GitHub push SHAs) -----
+      - name: Detect script changes in this push
         id: changed
         shell: bash
         run: |
           set -euo pipefail
-          BASE_COMMIT="$(git rev-parse HEAD^ || true)"
-          if [ -z "$BASE_COMMIT" ]; then
-            CHANGED="$(git show --name-only --pretty='format:')"
-          else
-            CHANGED="$(git diff --name-only "$BASE_COMMIT"..HEAD)"
+          BASE="${{ github.event.before }}"
+          HEAD="${{ github.sha }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            # Fallback for first commit / unusual push payload
+            echo "Using HEAD^ fallback for BASE"
+            BASE="$(git rev-parse HEAD^ || true)"
           fi
+
+          echo "BASE=$BASE"
+          echo "HEAD=$HEAD"
+
+          CHANGED="$(git diff --name-only "$BASE" "$HEAD" || true)"
           echo "Changed files:"
           echo "$CHANGED"
 
-          if echo "$CHANGED" | grep -E '^Scripts/.*\.(sh|zsh|py)$' >/dev/null 2>&1; then
-            echo "scripts_changed=true" >> $GITHUB_OUTPUT
-          elif echo "$CHANGED" | grep -E '\.(sh|zsh|py)$' >/dev/null 2>&1; then
-            # scripts changed outside Scripts/, still release but assets limited to Scripts/
-            echo "scripts_changed=true" >> $GITHUB_OUTPUT
+          if echo "$CHANGED" | grep -E '\.(sh|zsh|py)$' >/dev/null 2>&1; then
+            echo "scripts_changed=true" >> "$GITHUB_OUTPUT"
           else
-            echo "scripts_changed=false" >> $GITHUB_OUTPUT
+            echo "scripts_changed=false" >> "$GITHUB_OUTPUT"
           fi
 
       # ----- Build Scripts.zip (folder-only; ignore macOS cruft) -----
@@ -152,9 +159,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Ensure tags are available (checkout already did fetch-tags, but be defensive)
+          git fetch --tags --force >/dev/null 2>&1 || true
+
           LATEST="$(git tag -l 'v*' | sort -V | tail -n1)"
           if [ -z "$LATEST" ]; then
-            BASE="0.0"
+            BASE="0.4"   # set your starting line (change to 0.0 if you prefer)
           else
             BASE="${LATEST#v}"
           fi
@@ -165,8 +175,8 @@ jobs:
           [[ "$MINOR" =~ ^[0-9]+$ ]] || MINOR=0
           NEXT_MINOR=$((MINOR + 1))
           NEXT="v${MAJOR}.${NEXT_MINOR}"
-          echo "tag_name=${NEXT}" >> $GITHUB_OUTPUT
-          echo "release_name=Release ${NEXT}" >> $GITHUB_OUTPUT
+          echo "tag_name=${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "release_name=Release ${NEXT}" >> "$GITHUB_OUTPUT"
           echo "Computed next tag: ${NEXT}"
 
       # ----- Create GitHub Release (auto on change) -----
