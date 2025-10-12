@@ -1,102 +1,158 @@
-name: Script Versioning and Release
+name: Script release (nested + python)
 
 on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'            # Push a tag like v1.0.0 to create a release
   pull_request:
     paths:
-      - 'Scripts/**/*.sh'
-      - 'Scripts/**/*.zsh'
+      - '**/*.sh'
+      - '**/*.zsh'
+      - '**/*.py'
+      - 'scripts/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: script-release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
-  check-version:
+  versionize-and-notes:
+    name: Versionize headers, generate notes, update README
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Make version_check.sh executable
-        run: chmod +x .github/scripts/version_check.sh
-
-      - name: Run version check script if Scripts/ exists and is not empty
-        run: |
-          if [ -d Scripts ] && [ "$(ls -A Scripts)" ]; then
-            echo "Running version_check.sh..."
-            .github/scripts/version_check.sh
-          else
-            echo "Scripts directory is missing or empty. Skipping version check."
-          fi
-
-      - name: Commit changes if any (with logging)
-        run: |
-          if [ -d Scripts ] && [ "$(ls -A Scripts)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
-
-            echo "=== Git Status ==="
-            git status
-            echo "=== Git Diff ==="
-            git diff --cached
-
-            if git diff --quiet; then
-              echo "No changes to commit."
-            else
-              git add Scripts/
-              git commit -m "Auto-update script headers"
-              git push
-            fi
-          else
-            echo "Scripts directory is missing or empty. Nothing to commit."
-          fi
-
-  release:
-    if: github.ref == 'refs/heads/main'
-    needs: check-version
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
-      - name: Install OpenAI Python SDK
-        run: 'pip install openai==0.28'
+      - name: Install Python deps (if any)
+        run: |
+          python -m pip install --upgrade pip
+          # Add pinned deps here if your helper scripts need them
+          # pip install -r scripts/requirements.txt
 
-      - name: Generate release notes
+      - name: Generate release notes (skips if no key)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: python .github/scripts/generate_release_notes.py
-
-      - name: Extract version from scripts
-        id: extract_version
         run: |
-          VERSION=$(grep -h 'Version:' Scripts/* | sed -E 's/.*Version:[[:space:]]*//' | sort -V | tail -n 1)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          if [ -n "${OPENAI_API_KEY:-}" ]; then
+            python scripts/generate_release_notes.py
+          else
+            echo "OPENAI_API_KEY not set; skipping release notes generation."
+            # Ensure file exists so downstream steps won't fail
+            echo "# Release Notes" > RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            echo "_(No AI-generated release notes for this run.)_" >> RELEASE_NOTES.md
+          fi
 
-      - name: Zip scripts
+      - name: Update README from release notes
         run: |
-          mkdir -p temp_zip
-          cp Scripts/*.sh Scripts/*.zsh temp_zip/ 2>/dev/null || true
-          cd temp_zip
-          zip ../Scripts.zip *.sh *.zsh 2>/dev/null || true
-          cd ..
-          rm -rf temp_zip
+          python scripts/update_readme.py
+
+      - name: Make version script executable
+        run: chmod +x scripts/version_check.sh
+
+      - name: Apply version headers recursively (sh/zsh/py)
+        run: scripts/version_check.sh
+
+      - name: Build scripts bundle (recursive, ignore macOS cruft)
+        run: |
+          rm -f scripts_bundle.zip
+          # Collect all tracked shell & python files recursively
+          mapfile -d '' FILES < <(git ls-files -z '**/*.sh' '**/*.zsh' '**/*.py')
+          if [ "${#FILES[@]}" -gt 0 ]; then
+            # Use a temp staging dir to preserve paths in the zip
+            STAGE=".bundle_stage"
+            rm -rf "$STAGE"
+            mkdir -p "$STAGE"
+            for f in "${FILES[@]}"; do
+              mkdir -p "$STAGE/$(dirname "$f")"
+              cp "$f" "$STAGE/$f"
+            done
+            (cd "$STAGE" && zip -r ../scripts_bundle.zip . -x '*/.DS_Store')
+            rm -rf "$STAGE"
+          else
+            # Ensure a zip exists even if no files matched
+            zip -r scripts_bundle.zip . -x '*/.DS_Store' >/dev/null
+          fi
+          ls -lh scripts_bundle.zip
+
+      - name: Commit & push changes (only on branch pushes)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        run: |
+          if ! git diff --quiet; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "CI: versionize scripts (nested+py), update README & notes"
+            git push
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Upload bundle as workflow artifact (for debugging/PRs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scripts_bundle
+          path: scripts_bundle.zip
+
+  create-release:
+    name: Create GitHub Release (on tag)
+    runs-on: ubuntu-latest
+    needs: versionize-and-notes
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure bundle exists
+        run: |
+          if [ ! -f scripts_bundle.zip ]; then
+            # Rebuild if this job runs independently on the tag
+            mapfile -d '' FILES < <(git ls-files -z '**/*.sh' '**/*.zsh' '**/*.py')
+            rm -f scripts_bundle.zip
+            if [ "${#FILES[@]}" -gt 0 ]; then
+              STAGE=".bundle_stage"
+              rm -rf "$STAGE"
+              mkdir -p "$STAGE"
+              for f in "${FILES[@]}"; do
+                mkdir -p "$STAGE/$(dirname "$f")"
+                cp "$f" "$STAGE/$f"
+              done
+              (cd "$STAGE" && zip -r ../scripts_bundle.zip . -x '*/.DS_Store')
+              rm -rf "$STAGE"
+            else
+              zip -r scripts_bundle.zip . -x '*/.DS_Store' >/dev/null
+            fi
+          fi
+
+      - name: Ensure release notes exist
+        run: |
+          if [ ! -f RELEASE_NOTES.md ]; then
+            echo "# Release Notes" > RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            echo "_(Release notes not generated in this job.)_" >> RELEASE_NOTES.md
+          fi
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.extract_version.outputs.version }}
-          name: Release v${{ steps.extract_version.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           body_path: RELEASE_NOTES.md
           files: |
-            Scripts/*.sh
-            Scripts/*.zsh
-            Scripts.zip
-
-      - name: Update README
-        run: python .github/scripts/update_readme.py
+            scripts_bundle.zip
+            RELEASE_NOTES.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
