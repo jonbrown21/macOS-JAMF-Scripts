@@ -42,7 +42,7 @@ insert_header_block() {
   block="###############################################
 # Author : ${AUTHOR}
 # Date   : 2025-10-12
-# Version: 0.2
+# Version: 0.3
 ###############################################"
   if head -n1 "$f" | grep -q '^#!'; then
     { head -n1 "$f"; printf '%s\n' "$block"; tail -n +2 "$f"; } > "${f}.tmp" && mv "${f}.tmp" "$f"

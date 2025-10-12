@@ -4,7 +4,7 @@
 
 # Date   : 2025-10-12
 
-# Version: 0.3
+# Version: 0.4
 #
 # Description:
 # This script automatically cleans up the current user's Trash by deleting any files or folders
