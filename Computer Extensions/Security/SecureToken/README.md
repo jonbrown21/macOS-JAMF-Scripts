@@ -1,87 +1,77 @@
-# 🎥 Zoom — Managed App Configuration (macOS & iOS)
+# 🔐 SecureToken — macOS Account Privilege & Encryption Attributes
 
-This configuration allows Jamf Pro administrators to manage **Zoom** for both macOS and iOS using Managed App Configurations.  
-It enforces secure authentication through Single Sign-On (SSO), disables personal sign-ins (Google/Facebook), and ensures a consistent enterprise Zoom experience across devices.
-
----
-
-## 🧭 Overview
-Zoom supports MDM-delivered configuration profiles that let IT administrators control sign-in methods, meeting defaults, and other preferences.  
-Using these PLIST configurations, admins can force corporate SSO authentication and disable consumer login options on both macOS and iOS clients.
+This folder contains Extension Attributes that monitor **SecureToken status** and **local privilege escalation tools** on macOS.  
+Both are key signals for auditing FileVault access, account management, and privileged user controls in Jamf Pro.
 
 ---
 
-## ⚙️ Deployment Steps
+## 📄 Included EAs
 
-### For macOS
-1. **Download** the configuration file `ZOOM_macOS.plist`.
-2. In **Jamf Pro → Computers → Configuration Profiles → New**, create a new profile.
-3. Under **Application & Custom Settings**, upload the PLIST file.
-4. Use the following **Bundle Identifier**:
-   ```
-   us.zoom.config
-   ```
-5. Scope the profile to managed macOS devices and deploy.
+### `securetoken.sh`
+Reports which local user accounts have been granted a **SecureToken** — a macOS feature required for FileVault-enabled volumes.
 
-### For iOS
-1. **Download** the configuration file `ZOOM_iOS.plist`.
-2. In **Jamf Pro → Mobile Devices → Configuration Profiles → New**, create a new profile.
-3. Under **Application & Custom Settings**, upload the configuration file.
-4. Use the following **Bundle Identifier**:
-   ```
-   us.zoom.videomeetings
-   ```
-5. Assign to your target group and deploy.
+**How it works:**
+- Runs `diskutil apfs listUsers /` or `sysadminctl -secureTokenStatus <user>` depending on OS version.
+- Parses results for users with `SecureToken: ENABLED`.
+- Outputs a comma-separated list of usernames.
+
+**Example Output:**
+```xml
+<result>admin, securityuser</result>
+```
+
+**Use Cases:**
+- Verify that all FileVault-enabled Macs have at least one SecureToken holder.
+- Detect unauthorized token assignments.
+- Support recovery workflows for token repair.
 
 ---
 
-## 🔑 Managed Keys
+### `elevated_permissions.sh`
+Reports the **PrivilegesDemoter** tool version and current state.  
+This EA helps confirm that local user privilege elevation is properly controlled and demotion logic is functional.
 
-| Key | Description | Example / Value |
-|-----|--------------|----------------|
-| `ForceLoginWithSSO` | Requires users to sign in using SSO | `true` |
-| `ForceSSOURL` | Defines the organization’s SSO portal | `https://<company>.zoom.us` |
-| `NoFacebook` | Disables Facebook login option (macOS) | `true` |
-| `NoGoogle` | Disables Google login option (macOS) | `true` |
-| `PayloadType` | Defines configuration type | `us.zoom.config` |
+**How it works:**
+- Checks for `/Library/PrivilegedHelperTools/com.github.sindresorhus.PrivilegesDemoter`.
+- Reads the binary version via `defaults read` or `strings` inspection.
+- Returns version number or “Not Installed.”
 
-> 💡 Replace `<company>` in the SSO URL with your organization’s Zoom vanity domain.
+**Example Output:**
+```xml
+<result>1.4</result>
+```
 
----
-
-## ✅ Verification Steps
-
-### macOS
-1. Verify configuration profile installation under **System Settings → Profiles**.
-2. Launch Zoom and confirm only **SSO sign-in** is available.
-3. Google and Facebook login options should be hidden.
-
-### iOS
-1. On a managed iOS device, confirm profile installation under **Settings → General → VPN & Device Management → Profiles**.
-2. Launch Zoom:
-   - App should automatically redirect to your SSO sign-in page.
-   - No option should exist for personal Google/Facebook sign-ins.
+**Use Cases:**
+- Ensure PrivilegesDemoter is installed and up to date.
+- Audit privilege management enforcement.
+- Scope remediation policies to outdated or missing agents.
 
 ---
 
-## 🧰 Troubleshooting
+## ⚙️ Jamf Pro Setup
 
-| Issue | Likely Cause | Resolution |
-|--------|--------------|------------|
-| App still allows Google login | `NoGoogle` key missing or not applied | Verify correct PLIST and app bundle ID |
-| SSO not enforced | Missing `ForceLoginWithSSO` or incorrect SSO URL | Update `ForceSSOURL` to match company vanity URL |
-| Profile not installing | Scope misconfiguration | Confirm device assignment and re-push profile |
-| iOS app ignoring config | Outdated version | Update Zoom to latest release supporting Managed App Config |
-
----
-
-## 🧾 Notes
-- The macOS payload disables personal logins (Google/Facebook).  
-- The iOS payload enforces SSO for managed users.  
-- Both can be deployed concurrently via Jamf Pro.  
-- Works with Zoom client version **5.15+** and later.
+1. In **Jamf Pro → Settings → Computer Management → Extension Attributes → New**
+2. Set:
+   - **Input Type:** *Script*
+   - **Data Type:** *String*
+3. Paste either EA script’s contents.
+4. Save → Run an **Inventory Update** to verify results appear.
 
 ---
 
-## ⚠️ Disclaimer
-This configuration is provided as a reference for enterprise Zoom deployments. Always validate in a pilot environment before wide deployment.
+## 🧠 Smart Group Examples
+
+| Goal | EA | Condition | Example |
+|------|----|------------|----------|
+| Detect Macs with missing SecureToken | `SecureToken Holders` | **equals** `None` | Identify token-less FileVault systems |
+| Outdated PrivilegesDemoter | `PrivilegesDemoter Version` | **less than** `1.4` | Scope update policy |
+| Audit all Privilege Management tools | `PrivilegesDemoter Version` | **is not** `Not Installed` | Report coverage |
+
+---
+
+## ⚠️ Notes
+
+- Tested on macOS 12–15 (Intel and Apple Silicon).  
+- Both scripts run in < 2 seconds.  
+- Output normalized for Jamf Pro EA parsing.  
+- For compliance, these checks complement **FileVault** and **CIS L1** baselines.

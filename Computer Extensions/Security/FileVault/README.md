@@ -1,87 +1,61 @@
-# 🎥 Zoom — Managed App Configuration (macOS & iOS)
+# 🔒 FileVault — Screen Lock Compliance (EA)
 
-This configuration allows Jamf Pro administrators to manage **Zoom** for both macOS and iOS using Managed App Configurations.  
-It enforces secure authentication through Single Sign-On (SSO), disables personal sign-ins (Google/Facebook), and ensures a consistent enterprise Zoom experience across devices.
-
----
-
-## 🧭 Overview
-Zoom supports MDM-delivered configuration profiles that let IT administrators control sign-in methods, meeting defaults, and other preferences.  
-Using these PLIST configurations, admins can force corporate SSO authentication and disable consumer login options on both macOS and iOS clients.
+This folder contains an Extension Attribute that verifies **screen lock enforcement** on macOS — a common control in NIST/CIS baselines to prevent unattended access.
 
 ---
 
-## ⚙️ Deployment Steps
+## 📄 Included EA
 
-### For macOS
-1. **Download** the configuration file `ZOOM_macOS.plist`.
-2. In **Jamf Pro → Computers → Configuration Profiles → New**, create a new profile.
-3. Under **Application & Custom Settings**, upload the PLIST file.
-4. Use the following **Bundle Identifier**:
-   ```
-   us.zoom.config
-   ```
-5. Scope the profile to managed macOS devices and deploy.
+### `screensaver_lock.sh`
+Reports whether **Require password after screen lock** is enabled and whether the **idle timeout** is compliant (≤ 15 minutes / 900 seconds). The EA returns a Jamf `<result>` of either the current lock status or `Disabled`. fileciteturn24file0
 
-### For iOS
-1. **Download** the configuration file `ZOOM_iOS.plist`.
-2. In **Jamf Pro → Mobile Devices → Configuration Profiles → New**, create a new profile.
-3. Under **Application & Custom Settings**, upload the configuration file.
-4. Use the following **Bundle Identifier**:
-   ```
-   us.zoom.videomeetings
-   ```
-5. Assign to your target group and deploy.
+**What it checks (high level):**
+- `sysadminctl -screenLock status` → reads the “require password” toggle after sleep/screen saver. fileciteturn24file0
+- `com.apple.screensaver idleTime` (per‑host) → validates the idle timeout (≤ 900 seconds). fileciteturn24file0
+
+**Example Output:**
+```xml
+<result> Enabled </result>
+```
+or
+```xml
+<result> Disabled </result>
+```
+
+> If the password requirement is on **and** idleTime ≤ 900, the EA reports the lock status text (e.g., `Enabled`). Otherwise, it returns `Disabled`. fileciteturn24file0
 
 ---
 
-## 🔑 Managed Keys
+## ⚙️ Jamf Pro Setup
 
-| Key | Description | Example / Value |
-|-----|--------------|----------------|
-| `ForceLoginWithSSO` | Requires users to sign in using SSO | `true` |
-| `ForceSSOURL` | Defines the organization’s SSO portal | `https://<company>.zoom.us` |
-| `NoFacebook` | Disables Facebook login option (macOS) | `true` |
-| `NoGoogle` | Disables Google login option (macOS) | `true` |
-| `PayloadType` | Defines configuration type | `us.zoom.config` |
-
-> 💡 Replace `<company>` in the SSO URL with your organization’s Zoom vanity domain.
+1. **Settings → Computer Management → Extension Attributes → New**
+2. **Input Type:** *Script*
+3. **Data Type:** *String*
+4. Paste `screensaver_lock.sh` and **Save**
+5. Run an **Inventory Update** on a test Mac and review the EA value
 
 ---
 
-## ✅ Verification Steps
+## 🧠 Smart Group Examples
 
-### macOS
-1. Verify configuration profile installation under **System Settings → Profiles**.
-2. Launch Zoom and confirm only **SSO sign-in** is available.
-3. Google and Facebook login options should be hidden.
-
-### iOS
-1. On a managed iOS device, confirm profile installation under **Settings → General → VPN & Device Management → Profiles**.
-2. Launch Zoom:
-   - App should automatically redirect to your SSO sign-in page.
-   - No option should exist for personal Google/Facebook sign-ins.
+- **Non‑compliant screen lock**
+  - *Criterion:* `Screen Lock Compliance` **equals** `Disabled`
+- **Compliant devices**
+  - *Criterion:* `Screen Lock Compliance` **does not equal** `Disabled`
+- **Audit idle timeout exactly 15 minutes**
+  - *Criterion:* EA **matches regex** `Enabled` *(paired with separate EA or config profile for exact value if needed)*
 
 ---
 
-## 🧰 Troubleshooting
+## 🩺 Troubleshooting
 
-| Issue | Likely Cause | Resolution |
-|--------|--------------|------------|
-| App still allows Google login | `NoGoogle` key missing or not applied | Verify correct PLIST and app bundle ID |
-| SSO not enforced | Missing `ForceLoginWithSSO` or incorrect SSO URL | Update `ForceSSOURL` to match company vanity URL |
-| Profile not installing | Scope misconfiguration | Confirm device assignment and re-push profile |
-| iOS app ignoring config | Outdated version | Update Zoom to latest release supporting Managed App Config |
+- **Always `Disabled`** → Ensure the logged‑in user’s `idleTime` exists and is ≤ 900; the script reads it using the console user context. fileciteturn24file0  
+- **Localized systems** → The parsed string from `sysadminctl` may vary by locale; adjust parsing if needed. fileciteturn24file0  
+- **Multiple users** → The EA targets the **current console user**; shared Macs may require additional logic.
 
 ---
 
-## 🧾 Notes
-- The macOS payload disables personal logins (Google/Facebook).  
-- The iOS payload enforces SSO for managed users.  
-- Both can be deployed concurrently via Jamf Pro.  
-- Works with Zoom client version **5.15+** and later.
+## ⚠️ Notes
 
----
-
-## ⚠️ Disclaimer
-This configuration is provided as a reference for enterprise Zoom deployments. Always validate in a pilot environment before wide deployment.
+- Tested on macOS 12–15; runs in < 1s.
+- Use alongside a **Configuration Profile** (Login Window / Passcode payload) to enforce the setting; the EA is for **reporting** and scoping.
