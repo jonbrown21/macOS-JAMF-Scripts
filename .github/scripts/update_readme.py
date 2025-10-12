@@ -1,9 +1,9 @@
 ###############################################
 # Author : Jon Brown
 # Date   : 2025-10-12
-# Version: 0.2
+# Version: 0.3
 ###############################################
-__version__ = "0.2"
+__version__ = "0.3"
 START_MARKER = "<!-- VERSION_HISTORY_START -->"
 END_MARKER = "<!-- VERSION_HISTORY_END -->"
 
