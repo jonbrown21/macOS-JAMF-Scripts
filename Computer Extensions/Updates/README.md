@@ -1,87 +1,56 @@
-# 🎥 Zoom — Managed App Configuration (macOS & iOS)
+# 🔄 Updates — Automatic macOS Updates (EA)
 
-This configuration allows Jamf Pro administrators to manage **Zoom** for both macOS and iOS using Managed App Configurations.  
-It enforces secure authentication through Single Sign-On (SSO), disables personal sign-ins (Google/Facebook), and ensures a consistent enterprise Zoom experience across devices.
-
----
-
-## 🧭 Overview
-Zoom supports MDM-delivered configuration profiles that let IT administrators control sign-in methods, meeting defaults, and other preferences.  
-Using these PLIST configurations, admins can force corporate SSO authentication and disable consumer login options on both macOS and iOS clients.
+This folder contains a Jamf Pro **Extension Attribute** that reports whether **Automatic macOS Updates** are enabled on a device. Use it to track and enforce Apple software update posture across your fleet.
 
 ---
 
-## ⚙️ Deployment Steps
+## 📄 Included EA
 
-### For macOS
-1. **Download** the configuration file `ZOOM_macOS.plist`.
-2. In **Jamf Pro → Computers → Configuration Profiles → New**, create a new profile.
-3. Under **Application & Custom Settings**, upload the PLIST file.
-4. Use the following **Bundle Identifier**:
-   ```
-   us.zoom.config
-   ```
-5. Scope the profile to managed macOS devices and deploy.
+### `automatic_updates.sh`
+Returns `<result>Enabled</result>` or `<result>Disabled</result>` by checking the `AutomaticallyInstallMacOSUpdates` preference in both:
+- `/Library/Managed Preferences/com.apple.SoftwareUpdate` (MDM‑managed), and
+- `/Library/Preferences/com.apple.SoftwareUpdate` (system/user level).
 
-### For iOS
-1. **Download** the configuration file `ZOOM_iOS.plist`.
-2. In **Jamf Pro → Mobile Devices → Configuration Profiles → New**, create a new profile.
-3. Under **Application & Custom Settings**, upload the configuration file.
-4. Use the following **Bundle Identifier**:
-   ```
-   us.zoom.videomeetings
-   ```
-5. Assign to your target group and deploy.
+If either location reports `1` (true), the EA yields **Enabled**; otherwise **Disabled**.
+
+**Example Output:**
+```xml
+<result>Enabled</result>
+```
 
 ---
 
-## 🔑 Managed Keys
+## ⚙️ Jamf Pro Setup
 
-| Key | Description | Example / Value |
-|-----|--------------|----------------|
-| `ForceLoginWithSSO` | Requires users to sign in using SSO | `true` |
-| `ForceSSOURL` | Defines the organization’s SSO portal | `https://<company>.zoom.us` |
-| `NoFacebook` | Disables Facebook login option (macOS) | `true` |
-| `NoGoogle` | Disables Google login option (macOS) | `true` |
-| `PayloadType` | Defines configuration type | `us.zoom.config` |
-
-> 💡 Replace `<company>` in the SSO URL with your organization’s Zoom vanity domain.
+1. In **Jamf Pro → Settings (⚙) → Computer Management → Extension Attributes → New**
+2. **Input Type:** *Script*
+3. **Data Type:** *String*
+4. Paste the contents of `automatic_updates.sh` and **Save**
+5. Run an **Inventory Update** on a test Mac and confirm the value under **Inventory → Extension Attributes**
 
 ---
 
-## ✅ Verification Steps
+## 🧠 Smart Group Examples
 
-### macOS
-1. Verify configuration profile installation under **System Settings → Profiles**.
-2. Launch Zoom and confirm only **SSO sign-in** is available.
-3. Google and Facebook login options should be hidden.
+- **Devices with Auto Updates Disabled**  
+  *Criterion:* `Automatic macOS Updates` **equals** `Disabled`  
+  → Scope a remediation profile/policy that sets `AutomaticallyInstallMacOSUpdates = 1`.
 
-### iOS
-1. On a managed iOS device, confirm profile installation under **Settings → General → VPN & Device Management → Profiles**.
-2. Launch Zoom:
-   - App should automatically redirect to your SSO sign-in page.
-   - No option should exist for personal Google/Facebook sign-ins.
+- **Audit devices with Auto Updates Enabled**  
+  *Criterion:* `Automatic macOS Updates` **equals** `Enabled`
 
 ---
 
-## 🧰 Troubleshooting
+## 🩺 Troubleshooting
 
-| Issue | Likely Cause | Resolution |
-|--------|--------------|------------|
-| App still allows Google login | `NoGoogle` key missing or not applied | Verify correct PLIST and app bundle ID |
-| SSO not enforced | Missing `ForceLoginWithSSO` or incorrect SSO URL | Update `ForceSSOURL` to match company vanity URL |
-| Profile not installing | Scope misconfiguration | Confirm device assignment and re-push profile |
-| iOS app ignoring config | Outdated version | Update Zoom to latest release supporting Managed App Config |
+- **Value stays Disabled** → Check if another profile is enforcing software update behavior; verify the keys under both preference domains.  
+- **User override vs. MDM** → The EA prefers MDM‑managed value when present; confirm your configuration profile payloads.  
+- **Delayed changes** → EA values refresh on inventory; trigger a recon for immediate updates.
 
 ---
 
-## 🧾 Notes
-- The macOS payload disables personal logins (Google/Facebook).  
-- The iOS payload enforces SSO for managed users.  
-- Both can be deployed concurrently via Jamf Pro.  
-- Works with Zoom client version **5.15+** and later.
+## ⚠️ Notes
 
----
-
-## ⚠️ Disclaimer
-This configuration is provided as a reference for enterprise Zoom deployments. Always validate in a pilot environment before wide deployment.
+- Compatible with macOS 12–15 (Intel & Apple Silicon).  
+- Read‑only check; use **Configuration Profiles → Software Update** to enforce settings.  
+- Executes in < 1s.

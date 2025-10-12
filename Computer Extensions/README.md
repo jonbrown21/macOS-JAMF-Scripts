@@ -45,8 +45,6 @@ Each EA here is:
 | **Apps/** | App-specific EAs for version checks, presence, and app configuration states. |
 | **Agents/** | Management and security agent version reporting (Defender, CrowdStrike, Jamf Protect, etc.). |
 | **Updates/** | macOS and security update posture — XProtect, MRT, Gatekeeper DB, Automatic Updates, etc. |
-| **_templates/** | Standard templates for writing new EAs and README files. |
-| **_shared/** | Shared code snippets or helper libraries used across multiple EAs. |
 
 ---
 
