@@ -2,9 +2,9 @@
 
 # Author : Jon Brown
 
-# Date   : 2025-07-13
+# Date   : 2025-10-12
 
-# Version: 0.2
+# Version: 0.3
 #
 # Description:
 # This script automates the installation of **Grammarly Desktop** on macOS, handling permissions,
