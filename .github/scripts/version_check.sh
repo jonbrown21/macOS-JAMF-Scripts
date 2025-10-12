@@ -66,19 +66,33 @@ ensure_header_shell() {
 }
 
 ensure_python_version_line() {
-  # $1=file  $2=version_to_set (creates or updates __version__)
+  # $1=file  $2=version_to_set
   local f="$1" v="$2"
-  # If __version__ exists, replace its value; else insert near the top (after shebang if present)
-  if grep -qE '^__version__\s*=' "$f"; then
+
+  # Remove any stray __version__ lines before header
+  awk '!/^__version__/ {print}' "$f" > "${f}.tmp" && mv "${f}.tmp" "$f"
+
+  # Add __version__ *after header* (or after shebang if no header)
+  if grep -qE '^# Version:' "$f"; then
     awk -v ver="$v" '
-      BEGIN{done=0}
+      BEGIN { inserted=0 }
       {
-        if(!done && $0 ~ /^__version__[[:space:]]*=/){
-          print "__version__ = \"" ver "\""; done=1; next
-        }
         print
+        if (!inserted && /^###############################################$/) {
+          getline line
+          print line
+          getline line
+          print line
+          getline line
+          print line
+          getline line
+          print line
+          print "__version__ = \"" ver "\""
+          inserted=1
+        }
       }' "$f" > "${f}.tmp" && mv "${f}.tmp" "$f"
   else
+    # fallback: insert near top
     if head -n1 "$f" | grep -q '^#!'; then
       { head -n1 "$f"; echo "__version__ = \"${v}\""; tail -n +2 "$f"; } > "${f}.tmp" && mv "${f}.tmp" "$f"
     else
@@ -95,30 +109,26 @@ ensure_header_python() {
 
   if [[ -z "$cur" ]]; then
     local init="0.1"
-    # Insert header first so we can read it back reliably
     insert_header_block "$f" "$init"
     ensure_python_version_line "$f" "$init"
   else
     local new; new="$(bump_semver_like "$cur")"
-    # Update header fields
     sedi "s/^# Version: .*/# Version: ${new}/" "$f"
     sedi "s/^# Date   : .*/# Date   : ${TODAY}/" "$f"
-    # Sync __version__ to header (new)
     ensure_python_version_line "$f" "$new"
   fi
 }
 
-# ---- Collect tracked candidate files recursively (respects .gitignore) ----
+# ---- Collect tracked files recursively (respects .gitignore) ----
 FILES=()
 while IFS= read -r -d '' f; do FILES+=("$f"); done < <(git ls-files -z '**/*.sh' '**/*.zsh' '**/*.py')
 
-# Nothing to do?
 if [[ "${#FILES[@]}" -eq 0 ]]; then
-  echo "version_check.sh: No *.sh/*.zsh/*.py files found via git ls-files."
+  echo "version_check.sh: No *.sh/*.zsh/*.py files found."
   exit 0
 fi
 
-# ---- Process files ----
+# ---- Process ----
 for f in "${FILES[@]}"; do
   case "$f" in
     *.sh|*.zsh)
@@ -132,4 +142,4 @@ for f in "${FILES[@]}"; do
   esac
 done
 
-echo "version_check.sh: done."
+echo "✅ version_check.sh: All done."
