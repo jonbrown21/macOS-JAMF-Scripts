@@ -6,7 +6,7 @@
 ###############################################
 __version__ = "0.2"
 ###################################################################################################
-# jamf_compliance_ea_reports_v1_0.py — Generate Jamf Compliance EA Summary Reports
+# jamf_compliance_ea_reports_v2.0.py — Generate Jamf Compliance EA Summary Reports
 #
 # What this is
 # ------------
