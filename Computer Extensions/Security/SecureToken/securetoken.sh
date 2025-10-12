@@ -1,4 +1,9 @@
 #!/bin/zsh
+###############################################
+# Author : Jon Brown
+# Date   : 2025-10-12
+# Version: 0.1
+###############################################
 
 # Extension attribute to report all user accounts who have a secure token
 # If a user is found to have a secure token, the results will be displayed as:
