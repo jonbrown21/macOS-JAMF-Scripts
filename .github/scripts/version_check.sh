@@ -1,145 +1,206 @@
-#!/usr/bin/env bash
-# version_check.sh — recursive version header updater for sh/zsh/py
-# - Recursively finds tracked *.sh, *.zsh, *.py (respects .gitignore)
-# - Ensures a header block with Author / Date / Version
-# - Bumps Version (simple MAJOR.MINOR scheme) if header already present
-# - For Python: ensures __version__ exists and is kept in sync with header
-# Compatible with macOS (BSD sed) and Linux (GNU sed)
+name: Script release (auto on change, nested + python)
 
-set -euo pipefail
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    paths:
+      - "**/*.sh"
+      - "**/*.zsh"
+      - "**/*.py"
+      - "Scripts/**"
+      - "scripts/**"
+      - ".github/scripts/**"
+      - ".github/workflows/**"
+  workflow_dispatch:
 
-AUTHOR="Jon Brown"
-TODAY="$(date +%Y-%m-%d)"
+permissions:
+  contents: write
 
-# sed -i helper using *extended regex* (-E) on both GNU and BSD sed
-sedi() {
-  if sed --version >/dev/null 2>&1; then
-    sed -E -i "$@"
-  else
-    sed -E -i '' "$@"
-  fi
-}
+concurrency:
+  group: script-release-${{ github.ref }}
+  cancel-in-progress: false
 
-# Simple bump for MAJOR.MINOR (defaults to 0.1 on first insert; rolls minor then major)
-bump_semver_like() {
-  local v="${1:-0.1}"
-  local major="${v%%.*}"
-  local minor="${v#*.}"
-  [[ "$major" =~ ^[0-9]+$ ]] || major=0
-  [[ "$minor" =~ ^[0-9]+$ ]] || minor=1
-  if (( minor >= 10 )); then
-    major=$((major + 1)); minor=0
-  else
-    minor=$((minor + 1))
-  fi
-  echo "${major}.${minor}"
-}
+jobs:
+  release-on-change:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history + tags)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # needed for diff + tag discovery
+          fetch-tags: true
 
-insert_header_block() {
-  # $1=file  $2=initial_version
-  local f="$1" v="$2"
-  local block
-  block="###############################################
-# Author : ${AUTHOR}
-# Date   : 2025-10-12
-# Version: 0.4
-###############################################"
-  if head -n1 "$f" | grep -q '^#!'; then
-    { head -n1 "$f"; printf '%s\n' "$block"; tail -n +2 "$f"; } > "${f}.tmp" && mv "${f}.tmp" "$f"
-  else
-    { printf '%s\n' "$block"; cat "$f"; } > "${f}.tmp" && mv "${f}.tmp" "$f"
-  fi
-}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-ensure_header_shell() {
-  # $1=file (shebang preserved if present)
-  local f="$1"
-  local cur
-  cur="$(awk -F': ' '/^# Version:/{print $2; exit}' "$f")"
-  if [[ -z "$cur" ]]; then
-    insert_header_block "$f" "0.1"
-  else
-    local new; new="$(bump_semver_like "$cur")"
-    sedi "s/^# Version: .*/# Version: ${new}/" "$f"
-    sedi "s/^# Date   : .*/# Date   : ${TODAY}/" "$f"
-  fi
-}
+      - name: Install OpenAI SDK (legacy for generate_release_notes.py)
+        run: pip install openai==0.28
 
-ensure_python_version_line() {
-  # $1=file  $2=version_to_set
-  local f="$1" v="$2"
+      # ----- Generate release notes (optional; creates stub if script/key missing) -----
+      - name: Generate release notes (auto-detect path)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          NOTES_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/generate_release_notes\.py$' || true)"
+          if [ -z "${NOTES_SCRIPT}" ]; then
+            echo "No generate_release_notes.py found. Creating stub RELEASE_NOTES.md."
+            {
+              echo "# Release Notes ($(date -u +%Y-%m-%d))"
+              echo
+              echo "* Updated scripts"
+            } > RELEASE_NOTES.md
+            exit 0
+          fi
 
-  # Remove any stray __version__ lines before header
-  awk '!/^__version__/ {print}' "$f" > "${f}.tmp" && mv "${f}.tmp" "$f"
+          if [ -n "${OPENAI_API_KEY:-}" ]; then
+            echo "Running: python ${NOTES_SCRIPT}"
+            python "${NOTES_SCRIPT}"
+          else
+            echo "OPENAI_API_KEY not set; creating stub RELEASE_NOTES.md."
+            {
+              echo "# Release Notes ($(date -u +%Y-%m-%d))"
+              echo
+              echo "* Updated scripts"
+            } > RELEASE_NOTES.md
+          fi
 
-  # Add __version__ *after header* (or after shebang if no header)
-  if grep -qE '^# Version:' "$f"; then
-    awk -v ver="$v" '
-      BEGIN { inserted=0 }
-      {
-        print
-        if (!inserted && /^###############################################$/) {
-          getline line
-          print line
-          getline line
-          print line
-          getline line
-          print line
-          getline line
-          print line
-          print "__version__ = \"" ver "\""
-          inserted=1
-        }
-      }' "$f" > "${f}.tmp" && mv "${f}.tmp" "$f"
-  else
-    # fallback: insert near top
-    if head -n1 "$f" | grep -q '^#!'; then
-      { head -n1 "$f"; echo "__version__ = \"${v}\""; tail -n +2 "$f"; } > "${f}.tmp" && mv "${f}.tmp" "$f"
-    else
-      { echo "__version__ = \"${v}\""; cat "$f"; } > "${f}.tmp" && mv "${f}.tmp" "$f"
-    fi
-  fi
-}
+      - name: Update README from release notes (auto-detect path)
+        shell: bash
+        run: |
+          set -euo pipefail
+          UPDATE_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/update_readme\.py$' || true)"
+          if [ -z "${UPDATE_SCRIPT}" ]; then
+            echo "No update_readme.py found. Skipping README update."
+            exit 0
+          fi
+          echo "Running: python ${UPDATE_SCRIPT}"
+          python "${UPDATE_SCRIPT}"
 
-ensure_header_python() {
-  # $1=file
-  local f="$1"
-  local cur
-  cur="$(awk -F': ' '/^# Version:/{print $2; exit}' "$f")"
+      # ----- Version headers across nested folders (sh/zsh/py) -----
+      - name: Apply version headers recursively (sh/zsh/py)
+        shell: bash
+        run: |
+          set -euo pipefail
+          VC_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/version_check\.sh$' || true)"
+          if [ -z "${VC_SCRIPT}" ]; then
+            echo "No version_check.sh found. Skipping versioning."
+            exit 0
+          fi
+          chmod +x "${VC_SCRIPT}"
+          echo "Running: ${VC_SCRIPT}"
+          "${VC_SCRIPT}"
 
-  if [[ -z "$cur" ]]; then
-    local init="0.1"
-    insert_header_block "$f" "$init"
-    ensure_python_version_line "$f" "$init"
-  else
-    local new; new="$(bump_semver_like "$cur")"
-    sedi "s/^# Version: .*/# Version: ${new}/" "$f"
-    sedi "s/^# Date   : .*/# Date   : ${TODAY}/" "$f"
-    ensure_python_version_line "$f" "$new"
-  fi
-}
+      # ----- Commit version/README changes back to main if needed -----
+      - name: Commit & push changes (only on branch pushes)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! git diff --quiet; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "CI: versionize scripts (nested+py), update README & notes"
+            git push
+          else
+            echo "No changes to commit."
+          fi
 
-# ---- Collect tracked files recursively (respects .gitignore) ----
-FILES=()
-while IFS= read -r -d '' f; do FILES+=("$f"); done < <(git ls-files -z '**/*.sh' '**/*.zsh' '**/*.py')
+      # ----- Detect if scripts changed in this push (use GitHub push SHAs) -----
+      - name: Detect script changes in this push
+        id: changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.before }}"
+          HEAD="${{ github.sha }}"
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            # Fallback for first commit / unusual push payload
+            echo "Using HEAD^ fallback for BASE"
+            BASE="$(git rev-parse HEAD^ || true)"
+          fi
 
-if [[ "${#FILES[@]}" -eq 0 ]]; then
-  echo "version_check.sh: No *.sh/*.zsh/*.py files found."
-  exit 0
-fi
+          echo "BASE=$BASE"
+          echo "HEAD=$HEAD"
 
-# ---- Process ----
-for f in "${FILES[@]}"; do
-  case "$f" in
-    *.sh|*.zsh)
-      echo "Updating header (shell): $f"
-      ensure_header_shell "$f"
-      ;;
-    *.py)
-      echo "Updating header + __version__ (python): $f"
-      ensure_header_python "$f"
-      ;;
-  esac
-done
+          CHANGED="$(git diff --name-only "$BASE" "$HEAD" || true)"
+          echo "Changed files:"
+          echo "$CHANGED"
 
-echo "✅ version_check.sh: All done."
+          if echo "$CHANGED" | grep -E '\.(sh|zsh|py)$' >/dev/null 2>&1; then
+            echo "scripts_changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "scripts_changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ----- Build Scripts.zip (folder-only; ignore macOS cruft) -----
+      - name: Build Scripts.zip (folder-only)
+        if: steps.changed.outputs.scripts_changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f Scripts.zip
+          if [ -d "Scripts" ]; then
+            zip -r Scripts.zip Scripts -x '*/.DS_Store'
+            ls -lh Scripts.zip
+          else
+            echo "No Scripts/ folder found; skipping zip build."
+          fi
+
+      # ----- Compute next tag (bump minor from latest vX.Y) -----
+      - name: Compute next tag (vMAJOR.MINOR)
+        id: tagvars
+        if: steps.changed.outputs.scripts_changed == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Ensure tags are available (checkout already did fetch-tags, but be defensive)
+          git fetch --tags --force >/dev/null 2>&1 || true
+
+          LATEST="$(git tag -l 'v*' | sort -V | tail -n1)"
+          if [ -z "$LATEST" ]; then
+            BASE="0.4"   # set your starting line (change to 0.0 if you prefer)
+          else
+            BASE="${LATEST#v}"
+          fi
+          MAJOR="${BASE%%.*}"
+          REST="${BASE#*.}"
+          if [ "$REST" = "$BASE" ]; then MINOR=0; else MINOR="${REST%%.*}"; fi
+          [[ "$MAJOR" =~ ^[0-9]+$ ]] || MAJOR=0
+          [[ "$MINOR" =~ ^[0-9]+$ ]] || MINOR=0
+          NEXT_MINOR=$((MINOR + 1))
+          NEXT="v${MAJOR}.${NEXT_MINOR}"
+          echo "tag_name=${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "release_name=Release ${NEXT}" >> "$GITHUB_OUTPUT"
+          echo "Computed next tag: ${NEXT}"
+
+      # ----- Create GitHub Release (auto on change) -----
+      - name: Create GitHub Release (auto on change)
+        if: steps.changed.outputs.scripts_changed == 'true' && github.event_name == 'push' && startsWith(github.ref, 'refs/heads/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tagvars.outputs.tag_name }}
+          name: ${{ steps.tagvars.outputs.release_name }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            Scripts/**/*.sh
+            Scripts/**/*.zsh
+            Scripts/**/*.py
+            Scripts.zip
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Always upload artifact for PRs/debugging
+      - name: Upload Scripts.zip as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Scripts-zip
+          path: Scripts.zip
+          if-no-files-found: ignore
