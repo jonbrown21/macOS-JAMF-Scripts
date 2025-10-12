@@ -4,7 +4,7 @@
 
 # Date   : 2025-10-12
 
-# Version: 0.4
+# Version: 0.5
 
 # Description:
 # This script is intended to forcefully re-enroll a Mac into Automox using Jamf.

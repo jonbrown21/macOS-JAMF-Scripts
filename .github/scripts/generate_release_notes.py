@@ -1,9 +1,9 @@
 ###############################################
 # Author : Jon Brown
 # Date   : 2025-10-12
-# Version: 0.1
+# Version: 0.2
 ###############################################
-__version__ = "0.1"
+__version__ = "0.2"
 import openai
 import subprocess
 import os
