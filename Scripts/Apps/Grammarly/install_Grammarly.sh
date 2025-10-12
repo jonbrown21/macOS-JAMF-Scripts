@@ -4,7 +4,7 @@
 
 # Date   : 2025-10-12
 
-# Version: 0.4
+# Version: 0.5
 #
 # Description:
 # This script automates the installation of **Grammarly Desktop** on macOS, handling permissions,

@@ -4,7 +4,10 @@
 <!-- VERSION_HISTORY_START -->
 # Release Notes (2025-10-12)
 
-- Fixed workflow issue in the code base.
+- Improved compatibility with macOS Big Sur
+- Fixed issue with script failing to run on some computers
+- Added additional log messages for troubleshooting
+- Updated documentation
 <!-- VERSION_HISTORY_END -->
 
 Welcome to the **macOS JAMF Scripts** Repository! 🚀 Whether you're an IT admin managing fleets of Macs or just a curious tinkerer, this collection of scripts is here to make your JAMF Pro game stronger.  

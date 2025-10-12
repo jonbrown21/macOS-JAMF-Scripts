@@ -2,7 +2,7 @@
 ###############################################
 # Author : Jon Brown
 # Date   : 2025-10-12
-# Version: 0.2
+# Version: 0.3
 ###############################################
 OS=`/usr/bin/sw_vers -productVersion | /usr/bin/colrm 5`
 if [[ "$OS" < "10.5" ]]; then 

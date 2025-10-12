@@ -2,7 +2,7 @@
 ###############################################
 # Author : Jon Brown
 # Date   : 2025-10-12
-# Version: 0.2
+# Version: 0.3
 ###############################################
 
 enrollType=$(profiles status -type enrollment | head -1)
