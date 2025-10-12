@@ -41,29 +41,61 @@ jobs:
           # Add pinned deps here if your helper scripts need them
           # pip install -r scripts/requirements.txt
 
-      - name: Generate release notes (skips if no key)
+      - name: Generate release notes (auto-detect path)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        shell: bash
         run: |
+          set -euo pipefail
+          NOTES_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/generate_release_notes\.py$' || true)"
+          if [ -z "${NOTES_SCRIPT}" ]; then
+            echo "Could not find generate_release_notes.py under scripts/ or .github/scripts/. Creating stub notes."
+            echo "# Release Notes" > RELEASE_NOTES.md
+            echo "" >> RELEASE_NOTES.md
+            echo "_(No release notes script found in this run.)_" >> RELEASE_NOTES.md
+            exit 0
+          fi
+
           if [ -n "${OPENAI_API_KEY:-}" ]; then
-            python scripts/generate_release_notes.py
+            echo "Running: python ${NOTES_SCRIPT}"
+            python "${NOTES_SCRIPT}"
           else
-            echo "OPENAI_API_KEY not set; skipping release notes generation."
-            # Ensure file exists so downstream steps won't fail
+            echo "OPENAI_API_KEY not set; skipping AI release notes."
             echo "# Release Notes" > RELEASE_NOTES.md
             echo "" >> RELEASE_NOTES.md
             echo "_(No AI-generated release notes for this run.)_" >> RELEASE_NOTES.md
           fi
 
-      - name: Update README from release notes
+
+      - name: Update README from release notes (auto-detect path)
+        shell: bash
         run: |
-          python scripts/update_readme.py
+            set -euo pipefail
+            UPDATE_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/update_readme\.py$' || true)"
+            if [ -z "${UPDATE_SCRIPT}" ]; then
+              echo "Could not find update_readme.py under scripts/ or .github/scripts/. Skipping README update."
+              exit 0
+            fi
+            echo "Running: python ${UPDATE_SCRIPT}"
+            python "${UPDATE_SCRIPT}"
+
 
       - name: Make version script executable
         run: chmod +x scripts/version_check.sh
 
       - name: Apply version headers recursively (sh/zsh/py)
-        run: scripts/version_check.sh
+        shell: bash
+        run: |
+          set -euo pipefail
+          VC_SCRIPT="$(git ls-files | grep -E '(^|/)(scripts|\.github/scripts)/version_check\.sh$' || true)"
+          if [ -z "${VC_SCRIPT}" ]; then
+            echo "Could not find version_check.sh under scripts/ or .github/scripts/. Skipping versioning."
+            exit 0
+          fi
+          chmod +x "${VC_SCRIPT}"
+          echo "Running: ${VC_SCRIPT}"
+          "${VC_SCRIPT}"
+
 
       - name: Build scripts bundle (recursive, ignore macOS cruft)
         run: |
