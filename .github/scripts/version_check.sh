@@ -41,8 +41,8 @@ insert_header_block() {
   local block
   block="###############################################
 # Author : ${AUTHOR}
-# Date   : ${TODAY}
-# Version: ${v}
+# Date   : 2025-10-12
+# Version: 0.2
 ###############################################"
   if head -n1 "$f" | grep -q '^#!'; then
     { head -n1 "$f"; printf '%s\n' "$block"; tail -n +2 "$f"; } > "${f}.tmp" && mv "${f}.tmp" "$f"

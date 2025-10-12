@@ -2,9 +2,9 @@
 
 # Author : Jon Brown
 
-# Date   : 2025-07-13
+# Date   : 2025-10-12
 
-# Version: 0.3
+# Version: 0.4
 
 # Description:
 # This script is intended to forcefully re-enroll a Mac into Automox using Jamf.
