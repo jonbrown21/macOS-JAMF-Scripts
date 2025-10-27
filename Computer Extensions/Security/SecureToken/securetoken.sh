@@ -1,8 +1,8 @@
 #!/bin/zsh
 ###############################################
 # Author : Jon Brown
-# Date   : 2025-10-12
-# Version: 0.4
+# Date   : 2025-10-27
+# Version: 0.5
 ###############################################
 
 # Extension attribute to report all user accounts who have a secure token

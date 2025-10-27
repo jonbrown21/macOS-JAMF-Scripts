@@ -1,8 +1,6 @@
-# Release Notes (2025-10-12)
+# Release Notes (2025-10-27)
 
-- New version of JAMF Compliance Script
-- CI: versionize scripts (nested+py), update README & notes
+- Added JAMF Auditor Script
+- Added Readme Files to Scripts Folder
+- Updated JAMF Compliance Script to new version
 - Fixed Workflow
-- Untrack lingering .DS_Store files
-- Remove all .DS_Store files and clean subfolders
-- Fixed SCRIPTS Folder
