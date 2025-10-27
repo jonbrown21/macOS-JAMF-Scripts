@@ -1,4 +1,4 @@
-# Jamf Pro Cleanup Auditor — README 📋🧹
+# Jamf Pro Cleanup Auditor 📋🧹
 
 Turn Jamf Pro sprawl into clear, actionable reports. This script audits objects in your Jamf Pro instance, highlights unscoped or unused items, surfaces risky policy hygiene, and (optionally) moves clutter into an archive category—**read-only by default** with an **opt-in cleanup** switch.  
 *Script file: `JAMF Auditor.py`*
@@ -34,15 +34,18 @@ You can optionally move flagged items into an archive category (e.g., `z_Archive
 Prefer **OAuth client credentials**; the script will fall back to **username/password** if needed.
 
 **OAuth (recommended):**
-```bash
+~~~bash
 export JAMF_URL="https://yourorg.jamfcloud.com"
 export JAMF_CLIENT_ID="your_client_id"
 export JAMF_CLIENT_SECRET="your_client_secret"
-```
+~~~
 
 **Username/Password (fallback):**
-
-`export JAMF_URL="https://yourorg.jamfcloud.com" export JAMF_USER="api_reader" export JAMF_PASSWORD="••••••••"`
+~~~bash
+export JAMF_URL="https://yourorg.jamfcloud.com"
+export JAMF_USER="api_reader"
+export JAMF_PASSWORD="••••••••"
+~~~
 
 > The client first attempts `/api/oauth/token` (falls back to `/oauth/token` if needed). If OAuth returns `401 invalid_client`, it tries user/pass at `/api/v1/auth/token`. Tokens are cached and refreshed automatically.
 
@@ -51,47 +54,46 @@ export JAMF_CLIENT_SECRET="your_client_secret"
 ## Quick start
 
 **Default run (table output):**
-
-`/usr/local/bin/managed_python3 "JAMF Auditor.py"`
+~~~bash
+/usr/local/bin/managed_python3 "JAMF Auditor.py"
+~~~
 
 **JSON output to a file (for CI, tickets, dashboards):**
-
-`/usr/local/bin/managed_python3 "JAMF Auditor.py" --format json --out audit.json`
+~~~bash
+/usr/local/bin/managed_python3 "JAMF Auditor.py" --format json --out audit.json
+~~~
 
 **Explain one item (“why is/isn’t this flagged?”):**
-
-`/usr/local/bin/managed_python3 "JAMF Auditor.py" --why-policy 123 /usr/local/bin/managed_python3 "JAMF Auditor.py" --why-profile 456`
+~~~bash
+/usr/local/bin/managed_python3 "JAMF Auditor.py" --why-policy 123
+/usr/local/bin/managed_python3 "JAMF Auditor.py" --why-profile 456
+~~~
 
 **Move clutter into an archive category (opt-in, non-destructive):**
-
-`/usr/local/bin/managed_python3 "JAMF Auditor.py" \   --move-to-archive --archive-category "z_Archive"`
+~~~bash
+/usr/local/bin/managed_python3 "JAMF Auditor.py" \
+  --move-to-archive --archive-category "z_Archive"
+~~~
 
 ---
 
 ## Output
 
 ### Table mode (default)
-
 Emits readable sections like:
 
-- Unscoped Policies
-    
-- Unscoped macOS Configuration Profiles
-    
-- Unused Scripts / Packages / Computer Groups
-    
-- Policies with **NO** Triggers **AND NOT** Self Service
-    
+- Unscoped Policies  
+- Unscoped macOS Configuration Profiles  
+- Unused Scripts / Packages / Computer Groups  
+- Policies with **NO** Triggers **AND NOT** Self Service  
 - **Active** Policies **with** Self Service enabled
-    
 
-Each section includes an `ID Name` listing for quick action.
+Each section includes an `ID  Name` listing for quick action.
 
 ### JSON mode
-
 Top-level keys (stable for automation):
-
-`{
+~~~json
+{
   "stats": { "policies_total": 0, "profiles_total": 0, "scripts_total": 0, "packages_total": 0, "groups_total": 0 },
   "unscoped_policies": [{ "id": 1, "name": "..." }],
   "unscoped_profiles": [{ "id": 2, "name": "..." }],
@@ -101,28 +103,23 @@ Top-level keys (stable for automation):
   "policies_no_triggers_and_not_selfservice": [{ "id": 6, "name": "...", "frequency": "..." }],
   "active_policies_selfservice_enabled":      [{ "id": 7, "name": "...", "frequency": "..." }]
 }
-`
+~~~
 
 ---
 
 ## How it works (in brief)
 
-- Lists policies, profiles, scripts, packages, and groups via Jamf Classic endpoints proxied behind Modern API auth.
-    
-- Pulls **policy details** and **scope XML**; collects referenced **script/package IDs** anywhere in the policy payload.
-    
-- Determines “unused” by comparing references with inventory lists, and “unscoped” by checking **all computers**, target groups/computers, buildings/departments, and exclusions.
-    
-- Evaluates **policy triggers** and **Self Service** flags to find inert or exposed policies.
-    
+- Lists policies, profiles, scripts, packages, and groups via Jamf Classic endpoints proxied behind Modern API auth.  
+- Pulls **policy details** and **scope XML**; collects referenced **script/package IDs** anywhere in the policy payload.  
+- Determines “unused” by comparing references with inventory lists, and “unscoped” by checking **all computers**, target groups/computers, buildings/departments, and exclusions.  
+- Evaluates **policy triggers** and **Self Service** flags to find inert or exposed policies.  
 - If `--move-to-archive` is set, performs **category updates only** (XML PUT) to move items into the archive category—**no deletions**.
-    
 
 ---
 
 ## CLI options
-
-`--format table|json           Output style (default: table)
+~~~
+--format table|json           Output style (default: table)
 --out <file>                  Write JSON to file when --format json
 --inspect-policy <id>         Print raw scope/flags/refs for one policy (JSON)
 --inspect-profile <id>        Print raw scope for one profile (JSON)
@@ -134,7 +131,7 @@ Top-level keys (stable for automation):
 --timeout <sec>               HTTP timeout (default: 30)
 --insecure                    Skip TLS verification (lab only)
 --debug-auth | --debug-list   Verbose auth and listing logs to stderr
-`
+~~~
 
 ---
 
@@ -147,34 +144,39 @@ The script is **read-only** unless you pass `--move-to-archive`. Archive mode up
 ## Examples
 
 **Find dead policies (no triggers, not in Self Service):**
-
-`/usr/local/bin/managed_python3 "JAMF Auditor.py" --format json | \
+~~~bash
+/usr/local/bin/managed_python3 "JAMF Auditor.py" --format json | \
   jq '.policies_no_triggers_and_not_selfservice[] | {id, name, frequency}'
-`
+~~~
 
 **List unused scripts by name:**
-
-`/usr/local/bin/managed_python3 "JAMF Auditor.py" --format json | \
+~~~bash
+/usr/local/bin/managed_python3 "JAMF Auditor.py" --format json | \
   jq -r '.unused_scripts[] | [.id, .name] | @csv'
-`
+~~~
 
 **Archive only unscoped profiles:**
-
-`# Run once to review
+~~~bash
+# Run once to review
 /usr/local/bin/managed_python3 "JAMF Auditor.py" | sed -n '/^Unscoped macOS Configuration Profiles/,/^$/p'
 
 # Then archive the lot (category update only)
-#/usr/local/bin/managed_python3 "JAMF Auditor.py" --move-to-archive --archive-category "z_Archive"
-`
+/usr/local/bin/managed_python3 "JAMF Auditor.py" --move-to-archive --archive-category "z_Archive"
+~~~
 
 ---
 
 ## Troubleshooting
 
-- **401 / invalid\_client**: check OAuth client ID/secret; if your tenant doesn’t allow client creds, set `JAMF_USER`/`JAMF_PASSWORD`.
-    
-- **Everything shows “unscoped”**: verify your API role can read scope; some tenants restrict Classic endpoints behind Modern auth.
-    
-- **SSL errors**: fix trust or run with `--insecure` temporarily (don’t do this in prod).
-    
+- **401 / invalid_client**: check OAuth client ID/secret; if your tenant doesn’t allow client creds, set `JAMF_USER`/`JAMF_PASSWORD`.  
+- **Everything shows “unscoped”**: verify your API role can read scope; some tenants restrict Classic endpoints behind Modern auth.  
+- **SSL errors**: fix trust or run with `--insecure` temporarily (don’t do this in prod).  
 - **Timeouts**: increase `--timeout` on large tenants; the script parallelizes detail fetches but respects Jamf rate limits.
+
+---
+
+## Operational notes
+
+- Treat **table output** as a quick operator view and **JSON** as your source of truth for automation.  
+- Use **`--why-*`** during reviews to explain a single object to stakeholders: you’ll get its scope, triggers, self-service, and discovered references in one JSON blob.  
+- For recurring hygiene, run nightly or weekly and alert when counts change materially (e.g., new unscoped items).
