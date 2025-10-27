@@ -91,7 +91,17 @@ Each section includes an `ID Name` listing for quick action.
 
 Top-level keys (stable for automation):
 
-`{   "stats": { "policies_total": 0, "profiles_total": 0, "scripts_total": 0, "packages_total": 0, "groups_total": 0 },   "unscoped_policies": [{ "id": 1, "name": "..." }],   "unscoped_profiles": [{ "id": 2, "name": "..." }],   "unused_scripts":   [{ "id": 3, "name": "..." }],   "unused_packages":  [{ "id": 4, "name": "..." }],   "unused_groups":    [{ "id": 5, "name": "...", "is_smart": false }],   "policies_no_triggers_and_not_selfservice": [{ "id": 6, "name": "...", "frequency": "..." }],   "active_policies_selfservice_enabled":      [{ "id": 7, "name": "...", "frequency": "..." }] }`
+`{
+  "stats": { "policies_total": 0, "profiles_total": 0, "scripts_total": 0, "packages_total": 0, "groups_total": 0 },
+  "unscoped_policies": [{ "id": 1, "name": "..." }],
+  "unscoped_profiles": [{ "id": 2, "name": "..." }],
+  "unused_scripts":   [{ "id": 3, "name": "..." }],
+  "unused_packages":  [{ "id": 4, "name": "..." }],
+  "unused_groups":    [{ "id": 5, "name": "...", "is_smart": false }],
+  "policies_no_triggers_and_not_selfservice": [{ "id": 6, "name": "...", "frequency": "..." }],
+  "active_policies_selfservice_enabled":      [{ "id": 7, "name": "...", "frequency": "..." }]
+}
+`
 
 ---
 
@@ -112,7 +122,19 @@ Top-level keys (stable for automation):
 
 ## CLI options
 
-`--format table|json           Output style (default: table) --out <file>                  Write JSON to file when --format json --inspect-policy <id>         Print raw scope/flags/refs for one policy (JSON) --inspect-profile <id>        Print raw scope for one profile (JSON) --inspect-scope               Include scope details during inspections --why-policy <id>             Friendly “why” bundle for a policy (JSON) --why-profile <id>            Friendly “why” bundle for a profile (JSON) --move-to-archive             Move flagged items into archive category --archive-category <name>     Archive category name (default: z_Archive) --timeout <sec>               HTTP timeout (default: 30) --insecure                    Skip TLS verification (lab only) --debug-auth | --debug-list   Verbose auth and listing logs to stderr`
+`--format table|json           Output style (default: table)
+--out <file>                  Write JSON to file when --format json
+--inspect-policy <id>         Print raw scope/flags/refs for one policy (JSON)
+--inspect-profile <id>        Print raw scope for one profile (JSON)
+--inspect-scope               Include scope details during inspections
+--why-policy <id>             Friendly “why” bundle for a policy (JSON)
+--why-profile <id>            Friendly “why” bundle for a profile (JSON)
+--move-to-archive             Move flagged items into archive category
+--archive-category <name>     Archive category name (default: z_Archive)
+--timeout <sec>               HTTP timeout (default: 30)
+--insecure                    Skip TLS verification (lab only)
+--debug-auth | --debug-list   Verbose auth and listing logs to stderr
+`
 
 ---
 
@@ -126,15 +148,24 @@ The script is **read-only** unless you pass `--move-to-archive`. Archive mode up
 
 **Find dead policies (no triggers, not in Self Service):**
 
-`/usr/local/bin/managed_python3 "JAMF Auditor.py" --format json | \   jq '.policies_no_triggers_and_not_selfservice[] | {id, name, frequency}'`
+`/usr/local/bin/managed_python3 "JAMF Auditor.py" --format json | \
+  jq '.policies_no_triggers_and_not_selfservice[] | {id, name, frequency}'
+`
 
 **List unused scripts by name:**
 
-`/usr/local/bin/managed_python3 "JAMF Auditor.py" --format json | \   jq -r '.unused_scripts[] | [.id, .name] | @csv'`
+`/usr/local/bin/managed_python3 "JAMF Auditor.py" --format json | \
+  jq -r '.unused_scripts[] | [.id, .name] | @csv'
+`
 
 **Archive only unscoped profiles:**
 
-`# Run once to review /usr/local/bin/managed_python3 "JAMF Auditor.py" | sed -n '/^Unscoped macOS Configuration Profiles/,/^$/p'  # Then archive the lot (category update only) #/usr/local/bin/managed_python3 "JAMF Auditor.py" --move-to-archive --archive-category "z_Archive"`
+`# Run once to review
+/usr/local/bin/managed_python3 "JAMF Auditor.py" | sed -n '/^Unscoped macOS Configuration Profiles/,/^$/p'
+
+# Then archive the lot (category update only)
+#/usr/local/bin/managed_python3 "JAMF Auditor.py" --move-to-archive --archive-category "z_Archive"
+`
 
 ---
 
