@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 ###############################################
+# Author : Jon Brown
+# Date   : 2025-10-12
+# Version: 0.2
+###############################################
+###############################################
 # Jamf Pro Cleanup Auditor
 # Purpose: Identify Jamf Pro objects that are safe to cleanup and highlight policy hygiene issues.
 #

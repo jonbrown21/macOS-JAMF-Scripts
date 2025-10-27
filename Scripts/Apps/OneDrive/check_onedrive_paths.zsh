@@ -1,7 +1,7 @@
 ###############################################
 # Author : Jon Brown
-# Date   : 2025-10-12
-# Version: 0.8
+# Date   : 2025-10-27
+# Version: 0.9
 #
 # Description:
 # This script performs a compliance and cleanup check on a user's OneDrive folder 
