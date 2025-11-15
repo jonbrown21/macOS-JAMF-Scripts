@@ -1,5 +1,13 @@
 # macOS JAMF Scripts — Admin Pack 📦🍎
 
+![Shell Scripts](https://img.shields.io/badge/Shell-Scripts-Bash-%2343853D.svg)
+![macOS Supported](https://img.shields.io/badge/macOS-Supported-00aaff.svg)
+![JAMF Pro](https://img.shields.io/badge/JAMF-Pro-Automation-orange.svg)
+![Script Library](https://img.shields.io/badge/Script-Library-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Last Commit](https://img.shields.io/github/last-commit/jonbrown21/macOS-JAMF-Scripts/tree/main/Scripts)
+![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-green.svg)
+
 Curated, Jamf-friendly scripts for **installing apps**, **agent maintenance**, **security tasks**, and **compliance reporting** on macOS. Everything here is intended for **real-world MacAdmin use**: predictable logs, safe defaults, and clear parameters.
 
 ---
