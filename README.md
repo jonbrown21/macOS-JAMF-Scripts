@@ -2,12 +2,10 @@
 *Automate like a pro, because life's too short for manual configuration!*  
 
 ![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg)
-![Shell Scripts](https://img.shields.io/badge/Shell-%20Scripts-Bash-%2343853D.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 ![Last Commit](https://img.shields.io/github/last-commit/jonbrown21/macOS-JAMF-Scripts)
 ![Release v0.7](https://img.shields.io/github/v/release/jonbrown21/macOS-JAMF-Scripts)
 ![macOS Supported](https://img.shields.io/badge/macOS-Supported-00aaff.svg)
-![JAMF Pro](https://img.shields.io/badge/JAMF-Pro-Automation-orange.svg)
 ![Code Style: PEP8](https://img.shields.io/badge/Code%20Style-PEP8-blue.svg)
 ![Status: Production Ready](https://img.shields.io/badge/Status-Production%20Ready-green.svg)
 ![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-green.svg)
