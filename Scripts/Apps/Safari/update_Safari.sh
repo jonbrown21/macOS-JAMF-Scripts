@@ -27,16 +27,33 @@
 
 #!/bin/zsh
 
-echo "Checking for Safari updates..."
-AVAILABLE_UPDATES=$(softwareupdate --list 2>&1)
+# JAMF Parameters
+UPDATE_IDENTIFIER="$4"   # e.g., Safari26.1SequoiaAuto-26.1
+TARGET_VERSION="$5"      # e.g., 26.1
 
-if echo "$AVAILABLE_UPDATES" | grep -q "Safari"; then
-  echo "Safari update found. Installing..."
-  if ! softwareupdate -i "Safari*" --verbose; then
-    echo "❌ Safari update failed."
-    exit 1
-  fi
-  echo "✅ Safari updated successfully."
+# Get current Safari version from Info.plist
+CURRENT_VERSION=$(defaults read /Applications/Safari.app/Contents/Info CFBundleShortVersionString 2>/dev/null)
+
+echo "Current Safari version: $CURRENT_VERSION"
+echo "Target Safari version: $TARGET_VERSION"
+echo "Update identifier: $UPDATE_IDENTIFIER"
+
+if [[ "$CURRENT_VERSION" == "$TARGET_VERSION" ]]; then
+    echo "✅ Safari is already at version $TARGET_VERSION. No update needed."
+    exit 0
 else
-  echo "✅ No Safari update available."
+    echo "Safari is not at target version. Installing update..."
+    if softwareupdate -i "$UPDATE_IDENTIFIER" --verbose; then
+        NEW_VERSION=$(defaults read /Applications/Safari.app/Contents/Info CFBundleShortVersionString 2>/dev/null)
+        if [[ "$NEW_VERSION" == "$TARGET_VERSION" ]]; then
+            echo "✅ Safari updated successfully to version $NEW_VERSION."
+            exit 0
+        else
+            echo "⚠️ Update command completed, but Safari version is still $NEW_VERSION."
+            exit 0
+        fi
+    else
+        echo "❌ Safari update failed."
+        exit 1
+    fi
 fi
