@@ -1,5 +1,13 @@
 # 📦 App Configurations for macOS & iOS
 
+![Shell Scripts](https://img.shields.io/badge/Shell-Scripts-Bash-%2343853D.svg)
+![macOS Supported](https://img.shields.io/badge/macOS-Supported-00aaff.svg)
+![JAMF Pro](https://img.shields.io/badge/JAMF-Pro-Automation-orange.svg)
+![Config Library](https://img.shields.io/badge/Config-Library-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Last Commit](https://img.shields.io/github/last-commit/jonbrown21/macOS-JAMF-Scripts/tree/main/App%20Configs)
+![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-green.svg)
+
 Welcome to the **App Configs** library — a collection of pre‑built **Managed App Configurations** for common productivity apps used in Jamf Pro environments. These configurations let administrators define app settings automatically, without manual user setup.
 
 ---
