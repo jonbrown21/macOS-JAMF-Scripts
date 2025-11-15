@@ -11,14 +11,16 @@
 ![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-green.svg)
 
 <!-- VERSION_HISTORY_START -->
-# Release Notes (2025-10-12)
+# Release Notes (2025-11-15)
 
-- New version of JAMF Compliance Script
+- Updated Readme Files
+- Updated Safari Script
+- Added JAMF Profile Search Script
+- Added JAMF Auditor Script
+- Added Readme Files to Scripts Folder
 - CI: versionize scripts (nested+py), update README & notes
+- New version of JAMF Compliance Script
 - Fixed Workflow
-- Untrack lingering .DS_Store files
-- Remove all .DS_Store files and clean subfolders
-- Fixed SCRIPTS Folder
 <!-- VERSION_HISTORY_END -->
 
 Welcome to the **macOS JAMF Scripts** Repository! 🚀 Whether you're an IT admin managing fleets of Macs or just a curious tinkerer, this collection of scripts is here to make your JAMF Pro game stronger.  
