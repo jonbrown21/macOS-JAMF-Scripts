@@ -1,5 +1,14 @@
 # 🧩 Computer Extensions — Jamf Pro Extension Attributes Library
 
+![Shell Scripts](https://img.shields.io/badge/Shell-Scripts-Bash-%2343853D.svg)
+![macOS Supported](https://img.shields.io/badge/macOS-Supported-00aaff.svg)
+![JAMF Pro](https://img.shields.io/badge/JAMF-Pro-Automation-orange.svg)
+![Extension Library](https://img.shields.io/badge/Extension-Library-blue.svg)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Last Commit](https://img.shields.io/github/last-commit/jonbrown21/macOS-JAMF-Scripts/tree/main/Computer%20Extensions)
+![Contributions Welcome](https://img.shields.io/badge/Contributions-Welcome-green.svg)
+
+
 This directory contains a curated collection of **Jamf Pro Extension Attributes (EAs)** for macOS.  
 Each EA gathers a specific system fact, configuration state, or compliance signal that can be displayed in Jamf inventory and used for **Smart Groups**, **compliance policies**, or **reporting**.
 
