@@ -1,10 +1,10 @@
-# Release Notes (2025-11-15)
+# Release Notes (2026-06-29)
 
-- Updated Readme Files
+- Added Jamf API role audit script
+- Added Jamf Profile Search Script
+- Added Jamf Auditor Script
 - Updated Safari Script
-- Added JAMF Profile Search Script
-- Added JAMF Auditor Script
 - Added Readme Files to Scripts Folder
-- CI: versionize scripts (nested+py), update README & notes
-- New version of JAMF Compliance Script
+- New version of Jamf Compliance Script
 - Fixed Workflow
+- Continuous integration for versionizing scripts, updating README & notes

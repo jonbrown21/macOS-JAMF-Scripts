@@ -1,7 +1,7 @@
 ###############################################
 # Author : Jon Brown
-# Date   : 2025-11-15
-# Version: 0.5
+# Date   : 2026-06-29
+# Version: 0.6
 ###############################################
 import openai
 import subprocess

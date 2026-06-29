@@ -2,9 +2,9 @@
 
 # Author : Jon Brown
 
-# Date   : 2025-11-15
+# Date   : 2026-06-29
 
-# Version: 0.8
+# Version: 0.9
 #
 # Description:
 # This script adds a specified user account to the FileVault 2 pre-boot authorization list

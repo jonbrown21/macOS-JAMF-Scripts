@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+###############################################
+# Author : Jon Brown
+# Date   : 2025-11-15
+# Version: 0.3
+###############################################
 """
 Rank Jamf Pro computer extension attributes by smart-group usage.
 

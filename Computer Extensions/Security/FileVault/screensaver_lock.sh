@@ -1,8 +1,8 @@
 #!/bin/sh
 ###############################################
 # Author : Jon Brown
-# Date   : 2025-11-15
-# Version: 0.5
+# Date   : 2026-06-29
+# Version: 0.6
 ###############################################
 askForPassword=$(sysadminctl -screenLock status 2>&1 | awk '{split($0,a,"]"); print a[2]}' | xargs)
 user=$( ls -la /dev/console | cut -d " " -f 4 )

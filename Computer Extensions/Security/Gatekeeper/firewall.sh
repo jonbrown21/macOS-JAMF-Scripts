@@ -1,8 +1,8 @@
 #!/bin/bash
 ###############################################
 # Author : Jon Brown
-# Date   : 2025-11-15
-# Version: 0.5
+# Date   : 2026-06-29
+# Version: 0.6
 ###############################################
 OS=`/usr/bin/sw_vers -productVersion | /usr/bin/colrm 5`
 if [[ "$OS" < "10.5" ]]; then 

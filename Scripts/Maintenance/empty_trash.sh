@@ -2,9 +2,9 @@
 
 # Author : Jon Brown
 
-# Date   : 2025-11-15
+# Date   : 2026-06-29
 
-# Version: 0.7
+# Version: 0.8
 #
 # Description:
 # This script automatically cleans up the current user's Trash by deleting any files or folders
